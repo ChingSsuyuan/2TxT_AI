@@ -23,17 +23,3 @@ class CLIPCaptioner(nn.Module):
         )
         self.fc = nn.Linear(embed_dim, vocab_size)
         
-    def forward(self, images, captions=None):
-
-        with torch.no_grad():
-            image_features = self.clip_model.encode_image(images)
-            
-        if self.training and captions is not None:
-
-            caption_embeddings = self.embedding(captions)
-
-            output = self.decoder(caption_embeddings, image_features.unsqueeze(0))
-            return self.fc(output)
-
-        else:
-            return None  
