@@ -6,15 +6,21 @@ import json
 from collections import Counter
 import matplotlib.pyplot as plt
 import numpy as np
-from nltk.tokenize import word_tokenize
 import nltk
 
-# 确保nltk数据已下载
+# 确保所有需要的nltk数据都已下载
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
     print("下载nltk punkt分词器...")
     nltk.download('punkt')
+
+# 额外检查和下载punkt_tab资源
+try:
+    nltk.data.find('tokenizers/punkt_tab/english/')
+except LookupError:
+    print("下载nltk punkt_tab资源...")
+    nltk.download('punkt_tab')
 
 print("="*70)
 print("构建图像标题词汇表")
@@ -48,15 +54,25 @@ def preprocess_caption(caption):
     caption = re.sub(r'\s+', ' ', caption).strip()
     return caption
 
+# 简化的分词函数，避免使用可能缺少的NLTK资源
 def tokenize_captions(captions):
-    """对标题进行分词"""
+    """对标题进行分词 - 使用简单的空格分割而不是NLTK"""
     all_tokens = []
     processed_captions = []
     
     for caption in captions:
         processed = preprocess_caption(caption)
         processed_captions.append(processed)
-        tokens = word_tokenize(processed)
+        
+        # 使用简单的空格分割作为备选方案
+        try:
+            # 首先尝试NLTK的word_tokenize
+            tokens = nltk.word_tokenize(processed)
+        except LookupError:
+            # 如果失败，使用简单的空格分割
+            print("警告: 使用简单空格分词作为替代")
+            tokens = processed.split()
+            
         all_tokens.extend(tokens)
     
     return all_tokens, processed_captions
@@ -136,23 +152,25 @@ JOIN captions c ON i.id = c.image_id
 """)
 image_captions = {}
 for coco_id, caption in cursor.fetchall():
-    if coco_id not in image_captions:
-        image_captions[coco_id] = []
-    image_captions[coco_id].append(preprocess_caption(caption))
+    coco_id_str = str(coco_id)  # 确保键是字符串，避免JSON序列化问题
+    if coco_id_str not in image_captions:
+        image_captions[coco_id_str] = []
+    image_captions[coco_id_str].append(preprocess_caption(caption))
 
 with open(processed_captions_file, 'w', encoding='utf-8') as f:
     json.dump(image_captions, f, indent=2, ensure_ascii=False)
 
 # 可视化词频分布
 print("\n生成词频分布可视化...")
-# 获取前50个频繁词和它们的频率
-top_words = [word for word, _ in sorted_word_counts[:50]]
-top_counts = [count for _, count in sorted_word_counts[:50]]
+# 获取前50个频繁词和它们的频率（如果有那么多的话）
+top_count = min(50, len(sorted_word_counts))
+top_words = [word for word, _ in sorted_word_counts[:top_count]]
+top_counts = [count for _, count in sorted_word_counts[:top_count]]
 
 plt.figure(figsize=(15, 8))
 plt.bar(range(len(top_words)), top_counts, color='skyblue')
 plt.xticks(range(len(top_words)), top_words, rotation=90)
-plt.title('Top 50 词频分布')
+plt.title('Top 词频分布')
 plt.xlabel('词')
 plt.ylabel('频率')
 plt.tight_layout()
@@ -160,19 +178,28 @@ plt.savefig(os.path.join(vocab_dir, 'word_frequency.png'))
 
 # 计算词频分布统计
 freq_dist = np.array([count for _, count in sorted_word_counts])
-percentiles = np.percentile(freq_dist, [25, 50, 75, 90, 95, 99])
-
-print("\n词频分布统计:")
-print(f"最低词频: {freq_dist.min()}")
-print(f"最高词频: {freq_dist.max()}")
-print(f"平均词频: {freq_dist.mean():.2f}")
-print(f"中位数词频: {np.median(freq_dist):.2f}")
-print(f"25% 分位数: {percentiles[0]}")
-print(f"50% 分位数: {percentiles[1]}")
-print(f"75% 分位数: {percentiles[2]}")
-print(f"90% 分位数: {percentiles[3]}")
-print(f"95% 分位数: {percentiles[4]}")
-print(f"99% 分位数: {percentiles[5]}")
+# 确保有足够的数据点进行百分位计算
+if len(freq_dist) >= 4:  # 至少需要几个数据点
+    percentiles = np.percentile(freq_dist, [25, 50, 75, 90, 95, 99])
+    
+    print("\n词频分布统计:")
+    print(f"最低词频: {freq_dist.min()}")
+    print(f"最高词频: {freq_dist.max()}")
+    print(f"平均词频: {freq_dist.mean():.2f}")
+    print(f"中位数词频: {np.median(freq_dist):.2f}")
+    print(f"25% 分位数: {percentiles[0]}")
+    print(f"50% 分位数: {percentiles[1]}")
+    print(f"75% 分位数: {percentiles[2]}")
+    print(f"90% 分位数: {percentiles[3]}")
+    print(f"95% 分位数: {percentiles[4]}")
+    print(f"99% 分位数: {percentiles[5]}")
+else:
+    print("\n词频分布统计 (简化版):")
+    print(f"最低词频: {freq_dist.min()}")
+    print(f"最高词频: {freq_dist.max()}")
+    print(f"平均词频: {freq_dist.mean():.2f}")
+    if len(freq_dist) > 0:
+        print(f"中位数词频: {np.median(freq_dist):.2f}")
 
 # 绘制长尾分布
 plt.figure(figsize=(12, 6))
@@ -180,33 +207,41 @@ plt.plot(range(len(freq_dist)), np.sort(freq_dist)[::-1], color='blue')
 plt.title('词频长尾分布')
 plt.xlabel('词的排名')
 plt.ylabel('频率')
-plt.yscale('log')  # 使用对数尺度更好地展示长尾
+if len(freq_dist) > 1 and freq_dist.max() > 1:  # 确保有足够的数据使用对数尺度
+    plt.yscale('log')  # 使用对数尺度更好地展示长尾
 plt.grid(True, alpha=0.3)
 plt.savefig(os.path.join(vocab_dir, 'frequency_tail.png'))
 
-# 创建标题长度统计
-caption_lengths = [len(word_tokenize(caption)) for caption in processed_captions]
-max_len = max(caption_lengths)
-min_len = min(caption_lengths)
-avg_len = sum(caption_lengths) / len(caption_lengths)
+# 创建标题长度统计 - 使用简单的空格分割而不是nltk，确保兼容性
+def simple_word_count(text):
+    """简单的词数统计函数"""
+    return len(text.split())
 
-plt.figure(figsize=(10, 6))
-plt.hist(caption_lengths, bins=range(min_len, max_len + 2), color='green', alpha=0.7)
-plt.title('标题词数分布')
-plt.xlabel('词数')
-plt.ylabel('标题数量')
-plt.grid(True, alpha=0.3)
-plt.savefig(os.path.join(vocab_dir, 'caption_length_dist.png'))
-
-print("\n标题长度统计:")
-print(f"最短标题: {min_len} 词")
-print(f"最长标题: {max_len} 词")
-print(f"平均长度: {avg_len:.2f} 词")
+caption_lengths = [simple_word_count(caption) for caption in processed_captions]
+if caption_lengths:  # 确保有数据
+    max_len = max(caption_lengths)
+    min_len = min(caption_lengths)
+    avg_len = sum(caption_lengths) / len(caption_lengths)
+    
+    plt.figure(figsize=(10, 6))
+    bins = range(min_len, max_len + 2)
+    if len(bins) > 1:  # 确保有足够的bins
+        plt.hist(caption_lengths, bins=bins, color='green', alpha=0.7)
+    else:
+        plt.hist(caption_lengths, bins=10, color='green', alpha=0.7)  # 默认10个bins
+    plt.title('标题词数分布')
+    plt.xlabel('词数')
+    plt.ylabel('标题数量')
+    plt.grid(True, alpha=0.3)
+    plt.savefig(os.path.join(vocab_dir, 'caption_length_dist.png'))
+    
+    print("\n标题长度统计:")
+    print(f"最短标题: {min_len} 词")
+    print(f"最长标题: {max_len} 词")
+    print(f"平均长度: {avg_len:.2f} 词")
 
 # 关闭数据库连接
 conn.close()
 
-print("\n=" * 50)
 print("词汇表构建完成!")
 print(f"词汇表目录: {vocab_dir}")
-print("=" * 50)
