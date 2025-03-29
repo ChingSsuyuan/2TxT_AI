@@ -30,7 +30,7 @@ annFile = f'{dataDir}/annotations/captions_{dataType}.json'
 # 检查注释文件是否存在
 if not os.path.exists(annFile):
     print(f"注释文件不存在: {annFile}")
-    print("请从COCO官网下载注释文件,并放置在以下位置:")
+    print("请从COCO官网下载注释文件，并放置在以下位置:")
     print(f"  {annFile}")
     print("下载链接: http://images.cocodataset.org/annotations/annotations_trainval2017.zip")
     sys.exit(1)
