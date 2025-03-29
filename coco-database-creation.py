@@ -3,6 +3,7 @@ import json
 import sqlite3
 import numpy as np
 import requests
+import sys
 from io import BytesIO
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -233,7 +234,7 @@ for i, img_info in enumerate(selected_imgs):
                 plt.savefig(os.path.join(base_dir, f"preview_{img_id}.png"))
                 plt.close()
             else:
-                print(f"下载失败，HTTP状态码: {response.status_code}")
+                print(f"下载失败,HTTP状态码: {response.status_code}")
         else:
             print("图像URL不可用")
     except Exception as e:
