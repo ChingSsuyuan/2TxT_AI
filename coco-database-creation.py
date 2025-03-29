@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS captions (
 
 conn.commit()
 
+# 加载COCO API
 print("加载COCO数据集...")
 try:
     coco = COCO(annFile)
