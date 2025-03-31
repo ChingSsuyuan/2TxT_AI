@@ -1,301 +1,253 @@
 id,image_id,caption
-1,1,A man with a red helmet on a small moped on a dirt road. 
-2,1,Man riding a motor bike on a dirt road on the countryside.
-3,1,A man riding on the back of a motorcycle.
-4,1,A dirt path with a young person on a motor bike rests to the foreground of a verdant area with a bridge and a background of cloud-wreathed mountains. 
-5,1,A man in a red shirt and a red hat is on a motorcycle on a hill side.
-6,2,A woman wearing a net on her head cutting a cake. 
-7,2,A woman cutting a large white sheet cake.
-8,2,A woman wearing a hair net cutting a large sheet cake.
-9,2,there is a woman that is cutting a white cake
-10,2,A woman marking a cake with the back of a chef's knife. 
-11,3,A child holding a flowered umbrella and petting a yak.
-12,3,A young man holding an umbrella next to a herd of cattle.
-13,3,a young boy barefoot holding an umbrella touching the horn of a cow
-14,3,A young boy with an umbrella who is touching the horn of a cow.
-15,3,A boy holding an umbrella while standing next to livestock.
-16,4,A young boy standing in front of a computer keyboard.
-17,4,a little boy wearing headphones and looking at a computer monitor
-18,4,He is listening intently to the computer at school.
-19,4,A young boy stares up at the computer monitor.
-20,4,a young kid with head phones on using a computer 
-21,5,a boy wearing headphones using one computer in a long row of computers
-22,5,A little boy with earphones on listening to something.
-23,5,A group of people sitting at desk using computers.
-24,5,Children sitting at computer stations on a long table.
-25,5,A small child wearing headphones plays on the computer.
-26,6,A woman in a room with a cat.
-27,6,A girl smiles as she holds a cat and wears a brightly colored skirt.
-28,6,a woman is holding a cat in her kitchen
-29,6,A woman is working in a kitchen carrying a soft toy.
-30,6,A woman is holding a cat in her kitchen.
-31,7,A young girl inhales with the intent of blowing out a candle. 
-32,7,A young girl is preparing to blow out her candle.
-33,7,A kid is to blow out the single candle in a bowl of birthday goodness. 
-34,7,Girl blowing out the candle on an ice-cream 
-35,7,A little girl is getting ready to blow out a candle on a small dessert.
-36,8,A commercial stainless kitchen with a pot of food cooking. 
-37,8,Some food sits in a pot in a kitchen. 
-38,8,A kitchen has all stainless steel appliances and counters.
-39,8,a kitchen with a sink and many cooking machines and a pot of food
-40,8,Food cooks in a pot on a stove in a kitchen.
-41,9,Two men wearing aprons working in a commercial-style kitchen.
-42,9,Chefs preparing food in a professional metallic style kitchen.
-43,9,Two people standing around in a large kitchen.
-44,9,A commercial kitchen with two men working to prepare several plates.
-45,9,two men in white shirts in a large steel kitchen
-46,10,Two chefs in a restaurant kitchen preparing food. 
-47,10,Two cooks are cooking the food someone ordered at this restaurant
-48,10,The chef is cooking with pans on the stove next to an oven. 
-49,10,Two men that are standing in a kitchen.
-50,10,Two cooks are near the stove in a stainless steel kitchen.
-51,11,A man with a red helmet on a small moped on a dirt road. 
-52,11,Man riding a motor bike on a dirt road on the countryside.
-53,11,A man riding on the back of a motorcycle.
-54,11,A dirt path with a young person on a motor bike rests to the foreground of a verdant area with a bridge and a background of cloud-wreathed mountains. 
-55,11,A man in a red shirt and a red hat is on a motorcycle on a hill side.
-56,12,A woman wearing a net on her head cutting a cake. 
-57,12,A woman cutting a large white sheet cake.
-58,12,A woman wearing a hair net cutting a large sheet cake.
-59,12,there is a woman that is cutting a white cake
-60,12,A woman marking a cake with the back of a chef's knife. 
-61,13,A child holding a flowered umbrella and petting a yak.
-62,13,A young man holding an umbrella next to a herd of cattle.
-63,13,a young boy barefoot holding an umbrella touching the horn of a cow
-64,13,A young boy with an umbrella who is touching the horn of a cow.
-65,13,A boy holding an umbrella while standing next to livestock.
-66,14,A young boy standing in front of a computer keyboard.
-67,14,a little boy wearing headphones and looking at a computer monitor
-68,14,He is listening intently to the computer at school.
-69,14,A young boy stares up at the computer monitor.
-70,14,a young kid with head phones on using a computer 
-71,15,a boy wearing headphones using one computer in a long row of computers
-72,15,A little boy with earphones on listening to something.
-73,15,A group of people sitting at desk using computers.
-74,15,Children sitting at computer stations on a long table.
-75,15,A small child wearing headphones plays on the computer.
-76,16,A woman in a room with a cat.
-77,16,A girl smiles as she holds a cat and wears a brightly colored skirt.
-78,16,a woman is holding a cat in her kitchen
-79,16,A woman is working in a kitchen carrying a soft toy.
-80,16,A woman is holding a cat in her kitchen.
-81,17,A young girl inhales with the intent of blowing out a candle. 
-82,17,A young girl is preparing to blow out her candle.
-83,17,A kid is to blow out the single candle in a bowl of birthday goodness. 
-84,17,Girl blowing out the candle on an ice-cream 
-85,17,A little girl is getting ready to blow out a candle on a small dessert.
-86,18,A commercial stainless kitchen with a pot of food cooking. 
-87,18,Some food sits in a pot in a kitchen. 
-88,18,A kitchen has all stainless steel appliances and counters.
-89,18,a kitchen with a sink and many cooking machines and a pot of food
-90,18,Food cooks in a pot on a stove in a kitchen.
-91,19,Two men wearing aprons working in a commercial-style kitchen.
-92,19,Chefs preparing food in a professional metallic style kitchen.
-93,19,Two people standing around in a large kitchen.
-94,19,A commercial kitchen with two men working to prepare several plates.
-95,19,two men in white shirts in a large steel kitchen
-96,20,Two chefs in a restaurant kitchen preparing food. 
-97,20,Two cooks are cooking the food someone ordered at this restaurant
-98,20,The chef is cooking with pans on the stove next to an oven. 
-99,20,Two men that are standing in a kitchen.
-100,20,Two cooks are near the stove in a stainless steel kitchen.
-101,21,A man with a red helmet on a small moped on a dirt road. 
-102,21,Man riding a motor bike on a dirt road on the countryside.
-103,21,A man riding on the back of a motorcycle.
-104,21,A dirt path with a young person on a motor bike rests to the foreground of a verdant area with a bridge and a background of cloud-wreathed mountains. 
-105,21,A man in a red shirt and a red hat is on a motorcycle on a hill side.
-106,22,A woman wearing a net on her head cutting a cake. 
-107,22,A woman cutting a large white sheet cake.
-108,22,A woman wearing a hair net cutting a large sheet cake.
-109,22,there is a woman that is cutting a white cake
-110,22,A woman marking a cake with the back of a chef's knife. 
-111,23,A child holding a flowered umbrella and petting a yak.
-112,23,A young man holding an umbrella next to a herd of cattle.
-113,23,a young boy barefoot holding an umbrella touching the horn of a cow
-114,23,A young boy with an umbrella who is touching the horn of a cow.
-115,23,A boy holding an umbrella while standing next to livestock.
-116,24,A young boy standing in front of a computer keyboard.
-117,24,a little boy wearing headphones and looking at a computer monitor
-118,24,He is listening intently to the computer at school.
-119,24,A young boy stares up at the computer monitor.
-120,24,a young kid with head phones on using a computer 
-121,25,a boy wearing headphones using one computer in a long row of computers
-122,25,A little boy with earphones on listening to something.
-123,25,A group of people sitting at desk using computers.
-124,25,Children sitting at computer stations on a long table.
-125,25,A small child wearing headphones plays on the computer.
-126,26,A woman in a room with a cat.
-127,26,A girl smiles as she holds a cat and wears a brightly colored skirt.
-128,26,a woman is holding a cat in her kitchen
-129,26,A woman is working in a kitchen carrying a soft toy.
-130,26,A woman is holding a cat in her kitchen.
-131,27,A young girl inhales with the intent of blowing out a candle. 
-132,27,A young girl is preparing to blow out her candle.
-133,27,A kid is to blow out the single candle in a bowl of birthday goodness. 
-134,27,Girl blowing out the candle on an ice-cream 
-135,27,A little girl is getting ready to blow out a candle on a small dessert.
-136,28,A commercial stainless kitchen with a pot of food cooking. 
-137,28,Some food sits in a pot in a kitchen. 
-138,28,A kitchen has all stainless steel appliances and counters.
-139,28,a kitchen with a sink and many cooking machines and a pot of food
-140,28,Food cooks in a pot on a stove in a kitchen.
-141,29,Two men wearing aprons working in a commercial-style kitchen.
-142,29,Chefs preparing food in a professional metallic style kitchen.
-143,29,Two people standing around in a large kitchen.
-144,29,A commercial kitchen with two men working to prepare several plates.
-145,29,two men in white shirts in a large steel kitchen
-146,30,Two chefs in a restaurant kitchen preparing food. 
-147,30,Two cooks are cooking the food someone ordered at this restaurant
-148,30,The chef is cooking with pans on the stove next to an oven. 
-149,30,Two men that are standing in a kitchen.
-150,30,Two cooks are near the stove in a stainless steel kitchen.
-151,31,this is a very dark picture of a room with a shelf
-152,31,a cluttered room with a table and shelf on the wall.
-153,31,"A view of a messy room, with shelves on the wall."
-154,31,A dark and cluttered storage area with wood walls.
-155,31,A dim lit room consisting of many objects put together. 
-156,32,A kitchen filled with black appliances and lots of counter top space.
-157,32,some brown cabinets a black oven a tea kettle and a microwave
-158,32,A small kitchen with glass and wooden cabinets.
-159,32,A modern style kitchen filled with may different items.
-160,32,A kitchen with wooden cabinets and black appliances.
-161,33,A professional kitchen filled with sinks and appliances.
-162,33,A kitchen area with toilet and various cleaning appliances.
-163,33,A commercial dish washing station with a toilet in it.
-164,33,A toilet and mop bucket in a kitchen.
-165,33,"A cluttered room with a sink, a toilet and in industrial mop bucket."
-166,34,A man on a bicycle riding next to a train
-167,34,A person is riding a bicycle but there is a train in the background.
-168,34,a red and white train and a man riding a bicycle
-169,34,a guy that is riding his bike next to a train
-170,34,A man riding a bike past a train traveling along tracks.
-171,35,A narrow kitchen filled with appliances and cooking utensils.
-172,35,A galley kitchen with cabinets and appliances on both sides
-173,35,A hallway leading into a white kitchen with appliances.
-174,35,"Doorway view of a kitchen with a sink, stove, refrigerator and pantry."
-175,35,The pantry door of the small kitchen is closed.
-176,36,A kitchen with wood floors and lots of furniture.
-177,36,"A beautiful, open kitchen and dining room area features an island in the center and wood cabinets and large windows."
-178,36,A kitchen made of mostly wood with a small desk with a laptop.
-179,36,A very spacious room with a kitchen and dining area.
-180,36,A full view of an open kitchen and dining area.
-181,37,A woman eating vegetables in front of a stove.
-182,37,A woman forks vegetables out of a bowl into her mouth. 
-183,37,Woman eating an assortment of mixed vegetables in a bowl.
-184,37,A young woman standing in a kitchen eats a plate of vegetables.
-185,37,A woman eating fresh vegetables from a bowl.
-186,38,A kitchen is shown with a variety of items on the counters.
-187,38,A kitchen has the windows open and plaid curtains.
-188,38,A kitchen with two windows and two metal sinks.
-189,38,An older kitchen with cluttered counter tops but empty sink.
-190,38,Glasses and bottles are placed near a kitchen sink.
-191,39,A boy performing a kickflip on his skateboard on a city street.
-192,39,A man is doing a trick on a skateboard
-193,39,A guy jumps in the air with his skateboard beneath him.
-194,39,Man in all black doing a trick on his skateboard.
-195,39,A skateboarder flipping his board on a street.
-196,40,"A kitchen with a stove, microwave and refrigerator."
-197,40,"A refrigerator, oven and microwave sitting in a kitchen."
-198,40,The kitchenette uses  small space to great efficiency.
-199,40,an image of a kitchen setting with black appliances
-200,40,"A kitchen with cabinets, a stove, microwave and refrigerator."
-201,41,A man with a red helmet on a small moped on a dirt road. 
-202,41,Man riding a motor bike on a dirt road on the countryside.
-203,41,A man riding on the back of a motorcycle.
-204,41,A dirt path with a young person on a motor bike rests to the foreground of a verdant area with a bridge and a background of cloud-wreathed mountains. 
-205,41,A man in a red shirt and a red hat is on a motorcycle on a hill side.
-206,42,A woman wearing a net on her head cutting a cake. 
-207,42,A woman cutting a large white sheet cake.
-208,42,A woman wearing a hair net cutting a large sheet cake.
-209,42,there is a woman that is cutting a white cake
-210,42,A woman marking a cake with the back of a chef's knife. 
-211,43,A child holding a flowered umbrella and petting a yak.
-212,43,A young man holding an umbrella next to a herd of cattle.
-213,43,a young boy barefoot holding an umbrella touching the horn of a cow
-214,43,A young boy with an umbrella who is touching the horn of a cow.
-215,43,A boy holding an umbrella while standing next to livestock.
-216,44,A young boy standing in front of a computer keyboard.
-217,44,a little boy wearing headphones and looking at a computer monitor
-218,44,He is listening intently to the computer at school.
-219,44,A young boy stares up at the computer monitor.
-220,44,a young kid with head phones on using a computer 
-221,45,a boy wearing headphones using one computer in a long row of computers
-222,45,A little boy with earphones on listening to something.
-223,45,A group of people sitting at desk using computers.
-224,45,Children sitting at computer stations on a long table.
-225,45,A small child wearing headphones plays on the computer.
-226,46,A woman in a room with a cat.
-227,46,A girl smiles as she holds a cat and wears a brightly colored skirt.
-228,46,a woman is holding a cat in her kitchen
-229,46,A woman is working in a kitchen carrying a soft toy.
-230,46,A woman is holding a cat in her kitchen.
-231,47,A young girl inhales with the intent of blowing out a candle. 
-232,47,A young girl is preparing to blow out her candle.
-233,47,A kid is to blow out the single candle in a bowl of birthday goodness. 
-234,47,Girl blowing out the candle on an ice-cream 
-235,47,A little girl is getting ready to blow out a candle on a small dessert.
-236,48,A commercial stainless kitchen with a pot of food cooking. 
-237,48,Some food sits in a pot in a kitchen. 
-238,48,A kitchen has all stainless steel appliances and counters.
-239,48,a kitchen with a sink and many cooking machines and a pot of food
-240,48,Food cooks in a pot on a stove in a kitchen.
-241,49,Two men wearing aprons working in a commercial-style kitchen.
-242,49,Chefs preparing food in a professional metallic style kitchen.
-243,49,Two people standing around in a large kitchen.
-244,49,A commercial kitchen with two men working to prepare several plates.
-245,49,two men in white shirts in a large steel kitchen
-246,50,Two chefs in a restaurant kitchen preparing food. 
-247,50,Two cooks are cooking the food someone ordered at this restaurant
-248,50,The chef is cooking with pans on the stove next to an oven. 
-249,50,Two men that are standing in a kitchen.
-250,50,Two cooks are near the stove in a stainless steel kitchen.
-251,51,this is a very dark picture of a room with a shelf
-252,51,a cluttered room with a table and shelf on the wall.
-253,51,"A view of a messy room, with shelves on the wall."
-254,51,A dark and cluttered storage area with wood walls.
-255,51,A dim lit room consisting of many objects put together. 
-256,52,A kitchen filled with black appliances and lots of counter top space.
-257,52,some brown cabinets a black oven a tea kettle and a microwave
-258,52,A small kitchen with glass and wooden cabinets.
-259,52,A modern style kitchen filled with may different items.
-260,52,A kitchen with wooden cabinets and black appliances.
-261,53,A professional kitchen filled with sinks and appliances.
-262,53,A kitchen area with toilet and various cleaning appliances.
-263,53,A commercial dish washing station with a toilet in it.
-264,53,A toilet and mop bucket in a kitchen.
-265,53,"A cluttered room with a sink, a toilet and in industrial mop bucket."
-266,54,A man on a bicycle riding next to a train
-267,54,A person is riding a bicycle but there is a train in the background.
-268,54,a red and white train and a man riding a bicycle
-269,54,a guy that is riding his bike next to a train
-270,54,A man riding a bike past a train traveling along tracks.
-271,55,A narrow kitchen filled with appliances and cooking utensils.
-272,55,A galley kitchen with cabinets and appliances on both sides
-273,55,A hallway leading into a white kitchen with appliances.
-274,55,"Doorway view of a kitchen with a sink, stove, refrigerator and pantry."
-275,55,The pantry door of the small kitchen is closed.
-276,56,A kitchen with wood floors and lots of furniture.
-277,56,"A beautiful, open kitchen and dining room area features an island in the center and wood cabinets and large windows."
-278,56,A kitchen made of mostly wood with a small desk with a laptop.
-279,56,A very spacious room with a kitchen and dining area.
-280,56,A full view of an open kitchen and dining area.
-281,57,A woman eating vegetables in front of a stove.
-282,57,A woman forks vegetables out of a bowl into her mouth. 
-283,57,Woman eating an assortment of mixed vegetables in a bowl.
-284,57,A young woman standing in a kitchen eats a plate of vegetables.
-285,57,A woman eating fresh vegetables from a bowl.
-286,58,A kitchen is shown with a variety of items on the counters.
-287,58,A kitchen has the windows open and plaid curtains.
-288,58,A kitchen with two windows and two metal sinks.
-289,58,An older kitchen with cluttered counter tops but empty sink.
-290,58,Glasses and bottles are placed near a kitchen sink.
-291,59,A boy performing a kickflip on his skateboard on a city street.
-292,59,A man is doing a trick on a skateboard
-293,59,A guy jumps in the air with his skateboard beneath him.
-294,59,Man in all black doing a trick on his skateboard.
-295,59,A skateboarder flipping his board on a street.
-296,60,"A kitchen with a stove, microwave and refrigerator."
-297,60,"A refrigerator, oven and microwave sitting in a kitchen."
-298,60,The kitchenette uses  small space to great efficiency.
-299,60,an image of a kitchen setting with black appliances
-300,60,"A kitchen with cabinets, a stove, microwave and refrigerator."
+1,1,Two cows are in a mountainside field with snow-covered mountains in the background. 
+2,1,A white cow stands by a brown and white donkey looking over a hill. 
+3,1,A white bull and a donkey are in a field at a very high altitude. 
+4,1,A large white cow standing on top of a lush green hill.
+5,1,A bull standing near a donkey on a mountain top.
+6,2,A brown duck stands on one foot on a sandy shore.
+7,2,A duck walking on a sandy beach. 
+8,2,A black and gray goose standing in the sand
+9,2,A duck is walking in the sand near the water.
+10,2,"A mallard standing in the dirt, with its legs up."
+11,3,A monument is placed along a busy city road.
+12,3,a person near a rock monument with writing on it 
+13,3,Woman looking at a historic marker in a city.
+14,3,A stone monument beside a busy street 
+15,3,A person walking on the street near a rock and bus.
+16,4,A tall cake is decorated with flowers and white icing.
+17,4,A table with a tall cake and pots of herbs.
+18,4,a large cake on a table along with other foods
+19,4,a tall white cake on a plate made from a log
+20,4,a tall white cake with red flowers on top and some small orange pots
+21,5,Little kid opens mouth wide for a bite of the donut
+22,5,A very small cute kid with a big pastry by his face.
+23,5,A small child opening their mouth for a donut that is being dangled above them.
+24,5,A kid reaching for a glazed donut with it's mouth 
+25,5,A kid raising his head to bite a doughnut.
+26,6,A MAN GETTING PULLED FROM A BOAT IN THE WATER 
+27,6,A GROUP OF PEOPLE PULLING A MAN OUT OF WATER
+28,6,a couple of people are on a small boat
+29,6,Many people near a river gathering around in a circle
+30,6,A group of men trying to pull another man up onto a dock.
+31,7,A man at a table with two pairs of scisors
+32,7,A black and white photo of a man holding scissors
+33,7,A man that is sitting at a table with a pair of scissors.
+34,7,a man is sitting with scissors at a table
+35,7,A black and white photo of a man smiling for the camera.
+36,8,A picture of a scene in the streets.
+37,8,"A view of a city intersection with cars, transit buses, and pedestrians"
+38,8,A street scene of an intersection with people and cars.
+39,8,A city street with light traffic and lots of pedestrians.
+40,8,An intersection in of a city street on a cloudy day.
+41,9,A keyboard and mouse that appears to be hooked up to an external usb device.
+42,9,A keyboard and a mouse connected to some type of device.
+43,9,A computer keyboard and mouse with wires about connected to an electronic device.
+44,9,"A keyboard, a mouse, and an external hard drive."
+45,9,"A computer keyboard, mouse, wires, and white paper."
+46,10,A bathroom with a small white toilet next to a mirror topped sink.
+47,10,"A bathroom with a sink, toilet and picture on the wall."
+48,10,"A bathroom has a floating toilet, blue paint, and a vanity."
+49,10,A bathroom with a sink on the left under a mirror and a toilet.
+50,10,very clean bathroom with white towels and some bathing soaps
+51,11,Herd of cattle walking past construction area next to rocky cliff.
+52,11,A truck drives on a road covered with cattle in the mountains.
+53,11,A herd of cow walking along a mountain as a truck passes
+54,11,A herd of cattle and trucks on the road next to a banner
+55,11,A herd of cows walking down the road
+56,12,A boy holding a Wii controller in his hand 
+57,12,The young guy is standing up with a video game controller.
+58,12,a man wearing glasses and a white shirt holding a game controller
+59,12,A man in white shirt playing a game with a Nintendo Wii controller.
+60,12,A person playing  a video game in the living room.
+61,13,A green salad sits in a metal bowl.
+62,13,A silver bowl that contains several different vegetables.
+63,13,A metal bowl with several types of fresh vegetables sliced in it.
+64,13,A metal bowl of various salad ingredients on a counter.
+65,13,A bowl of lettuce and carrots next to bag of celery.
+66,14,A living room with a white wall and a beige couch.
+67,14,"A small living room with a sofa, chair, coffee table and tv."
+68,14,"A living room with a couch, chair, table, lamp and television in it. "
+69,14,"A couch, a chair, a table and a TV in a small room."
+70,14,Looks like an inviting place to relax and rejuvenate.
+71,15,Three men standing on a lawn holding paper plates and beer.
+72,15,"Three men standing on the grass outside, with two of them holding plates and one holding a bottle of Lucky Stripe beer."
+73,15,Three men stand in front of a beige building and the man in the middle who wears a hat holds a white Frisbee.
+74,15,A man holding a bottle standing next to two men holding plates.
+75,15,Three men standing outside in the grass with a beer.
+76,16,Coffee is shown in cups by a food entree.
+77,16,A picture of three different chocolate dishes and drinks.
+78,16,Some very tasty looking drinks and some  food.
+79,16,two cups of coffee next to a white plate of pastry and icecream
+80,16,This seems to be a plate of cake and some treats. 
+81,17,"A field with sheep milling around, some standing on rocks"
+82,17,A herd of sheep are grazing in a large field.
+83,17,Sheep in a green field overlooking a verdant valley
+84,17,A herd of sheep grazing on grass in a pasture.
+85,17,A herd of sheep lounging in an open field.
+86,18,A dog standing on a beach next to a fallen log.
+87,18,A dog digging a hole in the sand at the beach
+88,18,A dog digging a hole near the water.
+89,18,A dog digs a hole on a beach.
+90,18,A dog shakes sand off of its body.
+91,19,A giraffe standing in a field eating grass and plants.
+92,19,No two zebras have the same pattern of stripes.
+93,19,A closeup of a zebra grazing on grass.
+94,19,A zebra is eating the grass on the ground.
+95,19,A zebra stooping down to take a bite of grass.
+96,20,The green and white city bus is parked a the curb.
+97,20,The city bus is pulled over to the side of the road. 
+98,20,A green and white bus parked in front of a small building.
+99,20,A gren and white bus on street next to a building.
+100,20,Green and white bus on an otherwise empty street.
+101,21,A large black bear swimming in a river next to a muddy shore.
+102,21,The bear cub at the zoo is sitting with all four paws in the water.
+103,21,A small black bear looks up from the river. 
+104,21,a black bear sitting in the forest in the woods
+105,21,A young black bear sitting in a river.
+106,22,A person walking on carpet next to rows of cars.
+107,22,A sign that says Toyota with lots of cars inside a building.
+108,22,Many cars are on display in the vast building. 
+109,22,A man walks on the green carpet in the corridor of a Toyota dealership.
+110,22,Vehicles are on display inside of a large showroom.
+111,23,A train traveling down tracks near a tree filled forest.
+112,23,"A train with a large, black engine locomotive, heading down the track while it blows out steam."
+113,23,Smoke is coming out of a train engine on the tracks.
+114,23,an old steam engine barrels down the tracks towards the camera
+115,23,A train on the tracks that has smoke coming out the top.
+116,24,a close up of a pair of scissors on a piece of black material
+117,24,A pair of scissors sitting on top of a bed.
+118,24,A layer of fabric with a pincushion and a pair of scissors.
+119,24,A pair of scissors laying on a black piece of paper. 
+120,24,A small sewing kit sitting next to a pair of scissors.
+121,25,A vase filled with red and orange flowers.
+122,25,a glass vase containing red and yellow tulips
+123,25,On the table is a vase with red tulips. 
+124,25,"A bunch of flowers in a vase sitting on a table
+"
+125,25,A vase full of red tulips with a lot of green leafs
+126,26,A crosswalk with people crossing during a red light. 
+127,26,A traffic light hanging from a pole over a street.
+128,26,The traffic lights are green at this quaint intersection.
+129,26,People are walking across the busy street below traffic signals.
+130,26,A traffic light hanging over a city street.
+131,27,The kitties are waiting to go into their carrier.
+132,27,A cat on a leash outside of kennel that contains another cat.
+133,27,A cat with a leash sits on a blanket while another sits in a pet carrier.
+134,27,A cat sitting in front of a carrier with a leash.
+135,27,A cat is in a carrier near a cat on a leash.
+136,28,A group of people sitting at desk using laptop computers.
+137,28,"People sit at a library, studying and using computers"
+138,28,A woman with a head band on looking at a laptop in a library.
+139,28,People using their laptops to study in a library. 
+140,28,The people are working on their computers in the library.
+141,29,a fake sheep on green grass and flowers in the background
+142,29,A furry grey animal standing next to a table with a chair.
+143,29,A sheep standing in a garden like area.
+144,29,A sheep standing in a garden next to a table and chair. 
+145,29,A very furry fake stuffed sheep standing by some flowers.
+146,29,A sheep standing near a table and chair decorated with flowers.
+147,30,some people standing on the street looking a train 
+148,30,a trolley that is pulling into a station
+149,30,There is a train on the tracks at a station.
+150,30,A train pulling into a small road side station
+151,30,A commuter train going through a tourist area.
+152,31,some old ass luggage that should be out for trash
+153,31,a lot of old suitcase out side of a building
+154,31,A pile of luggage sits beside a pair of doors.
+155,31,A picture of some luggage on the ground.
+156,31,A pile of multi colored luggage sitting outside of a doorway.
+157,32,A young couple grinning from atop a grazing elephant
+158,32,A couple is riding an elephant on a dirt road.
+159,32,Two people smile while riding an elephant together.
+160,32,Two people riding on an elephant in a place with plenty of bushes
+161,32,a man and woman are riding an elephant 
+162,33,A teddy bear that is laying down on the ground.
+163,33,A teddy bear on the stone floor with stitches busted.
+164,33,a sad looking teddy bear is on the concrete
+165,33,A stuffed brown teddy bear laying on the ground.
+166,33,The smushed teddy bear is sitting on the cement sidewalk.
+167,34,A cat on the kitchen counter sticking its nose in a cupboard.
+168,34,A cat standing on a kitchen counter looking into a cupboard.
+169,34,A cat climbing up the side of a kitchen cupboard.
+170,34, a black cat looking in a kithen cabinet
+171,34,A cat snooping into a kitchen cabinet with a woman looking.
+172,35,"A woman wearing a tie, standing holding a paper."
+173,35,"Pretty woman with dark hair, black shirt, smiling while wearing a men's necktie"
+174,35,A waitress wearing a black shirt and beige tie smiles.
+175,35,A woman standing in a room full of people.
+176,35,A woman in a dress shirt is carrying paper
+177,36,A plane flying underneath a cloud filled sky.
+178,36,An jet airplane flying under cloudy skies with a small break in the clouds.
+179,36,Looking up into a stormy sky at a jet coming in to land
+180,36,Airplane flying in the sky on a dark night.
+181,36,"A plane flying with a dark, cloudy sky in the background."
+182,37,A single engine plane sits on the runway.
+183,37,a red white and blue four passenger airplane
+184,37,A plane that is sitting on a runway.
+185,37,A small aircraft sitting on a runway during the day
+186,37,an helicopter landing on the pavement on the ground
+187,38,A bathroom with focus on the toilet in the bathtub.
+188,38,a brown bathroom with three rugs a tub and a toilet
+189,38,a picture of a bathroom with two multi color rugs.
+190,38,"Bathroom scene with French door passageway in background, commode and bath tub, curtain on left, brown marble floor and marble wall on right."
+191,38,a brown and black bathroom with 3 different bath mats on the floor
+192,39,a man leaping into the air and holding a tennis racket
+193,39,A tennis player jumps to return a ball.
+194,39,A man holding a tennis racket jumping in the air.
+195,39,A male tennis player jumps as he serves.
+196,39,A man taking a swing at a tennis ball
+197,40,A woman standing next to a little girl near an animal.
+198,40,A couple of sheep are standing in a pin
+199,40,A young girl who is petting a sheep in a cage.
+200,40,A woman and a child are petting a sheep in a pen.
+201,40,A couple of people standing by a fence with some sheep.
+202,41,Helmeted person taking a tight corner on a motorcycle.
+203,41,A man on a motorcycle on a racing track.
+204,41,A person on a yellow motorcycle is turning around a street corner
+205,41,A person on a motorcycle taking a curve.
+206,41,One person is riding on a bike racing.
+207,42,A person riding a wave on top of a surfboard.
+208,42,A man surfing on a wave in the ocean.
+209,42,a man surfing in the water on a large wave
+210,42,person surfing a large wave in the ocean
+211,42,A man in a wet suit riding on a surfboard. 
+212,43,A woman holding a colorful umbrella standing on top of a wet ground.
+213,43,A woman with a rainbow umbrella walks a dog in the rain.
+214,43,A woman carrying a dog on a leash while holding an umbrella.
+215,43,The woman walking a dog is holding an umbrella.
+216,43,a lady with an umbrella walking her dog in the rain
+217,44,People playing tennis on a tennis court while others watch.
+218,44,A man takes a swing at a tennis ball
+219,44,A boy in white shirt holding a tennis racket on a sand court.
+220,44,Two people are playing tennis on an outdoor court.
+221,44,A few people playing tennis on the court.
+222,45,A young girl brushing her teeth with a tooth brush.
+223,45,A young child smiles while brushing his teeth.
+224,45,a little girl brushing her teeth with a blue toothbrush
+225,45,a young girl is using a blue toothbrush
+226,45,A girl with a toothbrush and toothpaste in her mouth.
+227,46,A brown teddy bear laying on top of a dry grass covered ground.
+228,46,A dirty brown and white teddy bear on the ground.
+229,46,an old stuffed teddy bear on the ground
+230,46,A worn teddy bear is lying on the ground.
+231,46,A stuffed bear laying outside on the ground.
+232,47,A group of people sitting at a dinner table with some drinks.
+233,47,Friends in a casual restaurant seated around a round wooden table.
+234,47,A group of people sitting at a small wooden table.
+235,47,Six people sit together around a wooden table in a restaurant.
+236,47,"A group of people sit around a table at a restaurant, with drinks in front of them"
+237,48,A woman sanding on a tennis court holding a racquet.
+238,48,A woman is holding her tennis racket for a match.
+239,48,A close up of a female tennis player holding a tennis racket.
+240,48,A woman is standing and holding a tennis racket. 
+241,48,A tennis player with a taped up knee waits for a serve.
+242,49,a dimly lit sink area in a white tiled bathroom
+243,49,Small bath tub next to a personal sink.
+244,49,A white bathroom sink sitting under a mirror.
+245,49,Large sink next to sunken tub displayed in tiled bathroom.
+246,49,"A bathroom with a light, mirror, sink, and tub."
+247,50,A man laying on the ground attached to a snow board.
+248,50,A person lying on the ground posing with a snowboard.
+249,50,A man wearing a snow board laying in the snow.
+250,50,A man is laying on the snow lifting his snowboard with his feet.
+251,50,A man in a brown winter jacket sitting in the snow with a snowboard attached to his boots. 
