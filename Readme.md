@@ -119,7 +119,7 @@ pip install -r requirements.txt
 export IMAGE_DIR="coco_image_title_data/images"
 export DB_PATH="coco_image_title_data/image_title_database.db"
 ```
-# 指定下载10张图片
+## 指定下载10张图片
 ```
 python run-coco-pipeline.py --num-images 10
 ```
