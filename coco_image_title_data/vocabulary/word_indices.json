@@ -300,7 +300,19 @@
     "great": 297,
     "efficiency": 298,
     "image": 299,
-    "setting": 300
+    "setting": 300,
+    "loaded": 301,
+    "pickup": 302,
+    "truck": 303,
+    "over": 304,
+    "spoons": 305,
+    "tools": 306,
+    "multiple": 307,
+    "chairs": 308,
+    "boat": 309,
+    "wheels": 310,
+    "trailer": 311,
+    "other": 312
   },
   "idx_to_word": {
     "0": "<PAD>",
@@ -603,7 +615,19 @@
     "297": "great",
     "298": "efficiency",
     "299": "image",
-    "300": "setting"
+    "300": "setting",
+    "301": "loaded",
+    "302": "pickup",
+    "303": "truck",
+    "304": "over",
+    "305": "spoons",
+    "306": "tools",
+    "307": "multiple",
+    "308": "chairs",
+    "309": "boat",
+    "310": "wheels",
+    "311": "trailer",
+    "312": "other"
   },
-  "vocab_size": 301
+  "vocab_size": 313
 }
