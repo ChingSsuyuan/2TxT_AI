@@ -3,8 +3,15 @@ import json
 import sqlite3
 import sys
 import requests
+import argparse
 from datetime import datetime
 from tqdm import tqdm
+
+# 解析命令行参数
+parser = argparse.ArgumentParser(description='创建COCO数据库并下载图片')
+parser.add_argument('--num-images', type=int, default=20,
+                    help='要下载的图片数量 (默认: 20)')
+args = parser.parse_args()
 
 # 检查和安装必要的包
 try:
@@ -107,8 +114,8 @@ except Exception as e:
 imgIds = coco.getImgIds()
 print(f"数据集中的图像总数: {len(imgIds)}")
 
-# 选择前n张图像
-n = 20  # 修改为20张图片
+# 获取用户指定的图片数量
+n = args.num_images
 num_images = min(n, len(imgIds))
 selected_img_ids = imgIds[:num_images]
 print(f"选择了 {num_images} 张图像进行处理")
