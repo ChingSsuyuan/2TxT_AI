@@ -2,3 +2,5 @@ coco_data/
 .DS_Store
 myenv
 .venv
+model_output
+coco_image_title_data/images
