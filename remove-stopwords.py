@@ -13,21 +13,63 @@ db_path = os.path.join(base_dir, 'image_title_database.db')
 # 定义要删除的停用词列表
 # 包括: 冠词，常见介词，表示数量的词等
 stopwords_to_remove = [
-    # 冠词
+    # ✅ 冠词
     "a", "an", "the",
     
-    # 常见介词
-    "at", "in", "on", "of", "for", "to", "with", "by", "from", "about","up","upon",
-    "s",
-    # 表示数量的词
-    "one", "two", "three", "four", "five", "six","seven",
+    # ✅ 常见介词
+    "at", "in", "on", "of", "for", "to", "with", "by", "from", "about", "up", "upon", "above",
+    "below", "under", "over", "into", "onto", "between", "among", "through", "within", "without",
     
-    # 其他常见停用词
-    "and", "is", "are", "it", "its", "this", "that", "these", "those",
-    "there", "here", "some", "many", "as", "be", "been", "has", "have", 
-    "was", "were", "will", "would", "could", "should","who","whose",
+    # ✅ 表示数量的词
+    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+    
+    # ✅ 其他常见停用词
+    "and", "or", "but", "if", "so", "because", "although", "though", "since", "while", "when",
+    "is", "are", "was", "were", "be", "been", "has", "have", "will", "would", "could", "should",
+    "might", "must", "can", "do", "does", "did", "done",
+    
+    # ✅ 代词
+    "it", "its", "this", "that", "these", "those", "there", "here", "who", "whom", "whose", 
+    "which", "what", "where", "when", "why", "how", "anyone", "someone", "everyone", "nobody",
+    
+    # ✅ 泛指和模糊的指代词
+    "thing", "stuff", "anything", "everything", "nothing", "something", "some", "many", "few", "several",
+    
+    # ✅ 否定词
+    "not", "no", "none", "never", "without", "neither", "nor",
+    
+    # ✅ 尺寸和形状
+    "small", "medium", "large", "big", "tiny", "huge", "size", "shape", "form", "round", "square", "long",
+    "short", "wide", "narrow", "thin", "thick",
+    
+    # ✅ 时间和频率
+    "now", "then", "before", "after", "always", "sometimes", "never", "once", "twice", "often",
+    
+    # ✅ 动作或模糊指令
+    "do", "make", "create", "put", "show", "display", "take", "give", "get", "see", "look", "come",
+    "go", "move", "use",
+    
+    # ✅ 颜色相关
+    "color", "colors", "colored", "shade", "hue", "tint", "dark", "light", "bright", "pale", "vivid",
+    
+    # ✅ 感受和情感（模糊形容词）
+    "beautiful", "ugly", "good", "bad", "nice", "cool", "interesting", "amazing", "wonderful",
+    
+    # ✅ 泛指情境词
+    "place", "area", "part", "piece", "portion", "set", "group", "kind", "sort", "type",
+    
+    # ✅ 连接词、限定词、修饰词
+    "very", "quite", "really", "just", "only", "even", "such", "which", "while", "since",
+    
+    # ✅ 虚词和填充词
+    "um", "uh", "oh", "ah", "well", "like", "yeah", "okay", "hmm",
+    
+    # ✅ 其他无关视觉的常见词
+    "up", "down", "out", "back", "again", "always", "maybe", "perhaps", "sure", "probably",
+    
+    # ✅ 常见缩写
+    "s", "t", "ll", "d", "m", "re", "ve", "y",
 ]
-
 # 连接到数据库
 print(f"连接到数据库: {db_path}")
 try:
