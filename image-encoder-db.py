@@ -7,8 +7,7 @@ import sqlite3
 import os
 import numpy as np
 import time
-from tqdm import tqdm  # 用于显示进度条
-
+from tqdm import tqdm  
 class ImageEncoder:
     """图像编码器基类"""
     def __init__(self, output_feature_dim):
