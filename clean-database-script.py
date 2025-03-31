@@ -1,100 +1,329 @@
 import os
+import json
 import sqlite3
-import shutil
 import sys
+import requests
+import argparse
+import random
+import time
+from datetime import datetime
+from tqdm import tqdm
 
-print("="*70)
-print("清空COCO图像标题数据库及下载的图片")
-print("="*70)
+# 解析命令行参数
+parser = argparse.ArgumentParser(description='创建COCO数据库并下载图片')
+parser.add_argument('--num-images', type=int, default=20,
+                    help='要下载的图片数量 (默认: 20)')
+parser.add_argument('--random-seed', type=int, default=None,
+                    help='随机种子，用于图片选择 (默认: 使用系统时间)')
+parser.add_argument('--force', action='store_true',
+                    help='强制重新下载，即使数据库已有数据')
+parser.add_argument('--debug', action='store_true',
+                    help='启用调试输出')
+cmd_args = parser.parse_args()
 
-# 设置路径
-base_dir = 'coco_image_title_data'
-db_path = os.path.join(base_dir, 'image_title_database.db')
-images_dir = os.path.join(base_dir, 'images')
-vocab_dir = os.path.join(base_dir, 'vocabulary')
+# 设置调试函数
+def debug_print(*message_args, **kwargs):
+    if cmd_args.debug:
+        print("[DEBUG]", *message_args, **kwargs)
 
-# 检查数据库是否存在
-if not os.path.exists(db_path):
-    print(f"警告: 数据库文件不存在: {db_path}")
-    print("没有需要清空的数据库。")
-    sys.exit(0)
-
-# 确认操作
-print("此操作将会:")
-print(f"1. 清空数据库中的所有表 ({db_path})")
-print(f"2. 删除所有下载的图片 ({images_dir})")
-print(f"3. 清理词汇表数据 ({vocab_dir})")
-print("\n警告: 此操作不可逆!")
-
-confirmation = input("\n请输入 'yes' 确认执行清空操作: ")
-if confirmation.lower() != 'yes':
-    print("操作已取消。")
-    sys.exit(0)
-
-# 连接到数据库
+# 检查和安装必要的包
 try:
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    
-    # 获取当前表的信息
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-    tables = cursor.fetchall()
-    
-    if tables:
-        print("\n清空数据库表:")
-        # 禁用外键约束以便顺利删除数据
-        cursor.execute("PRAGMA foreign_keys = OFF")
-        
-        # 清空所有表
-        for table in tables:
-            table_name = table[0]
-            cursor.execute(f"DELETE FROM {table_name}")
-            print(f"- 已清空表: {table_name}")
-        
-        # 重置自增ID
-        for table in tables:
-            table_name = table[0]
-            try:
-                cursor.execute(f"DELETE FROM sqlite_sequence WHERE name='{table_name}'")
-            except sqlite3.OperationalError:
-                # 如果表没有自增列，可能会出错，忽略即可
-                pass
-        
-        # 重新启用外键约束
-        cursor.execute("PRAGMA foreign_keys = ON")
-        
-        # 提交更改
-        conn.commit()
-        print("所有表已清空，自增ID已重置。")
-    else:
-        print("数据库中没有表。")
-    
-    # 关闭数据库连接
-    conn.close()
-    
-except sqlite3.Error as e:
-    print(f"清空数据库时出错: {e}")
+    from pycocotools.coco import COCO
+except ImportError:
+    print("安装pycocotools...")
+    import pip
+    pip.main(['install', 'pycocotools'])
+    from pycocotools.coco import COCO
+
+# 尝试导入进度条库
+try:
+    from tqdm import tqdm
+except ImportError:
+    print("安装tqdm进度条...")
+    import pip
+    pip.main(['install', 'tqdm'])
+    from tqdm import tqdm
+
+print("="*70)
+print("从COCO数据集获取图片ID和标题信息并存入数据库")
+print("并下载图片到本地")
+print("="*70)
+
+# 创建目录结构
+base_dir = 'coco_image_title_data'
+os.makedirs(base_dir, exist_ok=True)
+
+# 为图像创建目录
+images_dir = os.path.join(base_dir, 'images')
+os.makedirs(images_dir, exist_ok=True)
+
+# 设置COCO API
+dataDir = 'coco_data'
+os.makedirs(os.path.join(dataDir, 'annotations'), exist_ok=True)
+dataType = 'train2017'
+annFile = f'{dataDir}/annotations/captions_{dataType}.json'
+
+# 检查注释文件是否存在
+if not os.path.exists(annFile):
+    print(f"注释文件不存在: {annFile}")
+    print("请从COCO官网下载注释文件,并放置在以下位置:")
+    print(f"  {annFile}")
+    print("下载链接: http://images.cocodataset.org/annotations/annotations_trainval2017.zip")
     sys.exit(1)
 
-# 清理图片目录
-if os.path.exists(images_dir):
-    try:
-        # 删除并重新创建目录
-        shutil.rmtree(images_dir)
-        os.makedirs(images_dir)
-        print(f"\n已清空图片目录: {images_dir}")
-    except Exception as e:
-        print(f"清空图片目录时出错: {e}")
+# 初始化数据库
+db_path = os.path.join(base_dir, 'image_title_database.db')
+print(f"创建/连接数据库: {db_path}")
 
-# 清理词汇表目录 (如果存在)
-if os.path.exists(vocab_dir):
-    try:
-        # 删除并重新创建目录
-        shutil.rmtree(vocab_dir)
-        os.makedirs(vocab_dir)
-        print(f"已清空词汇表目录: {vocab_dir}")
-    except Exception as e:
-        print(f"清空词汇表目录时出错: {e}")
+conn = sqlite3.connect(db_path)
+cursor = conn.cursor()
 
-print("\n数据库清空操作完成!")
-print("你现在可以重新运行流水线来处理新的数据。")
+# 创建表 - 简化版本
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS images (
+    id INTEGER PRIMARY KEY,
+    coco_id INTEGER UNIQUE,
+    file_name TEXT,
+    width INTEGER,
+    height INTEGER,
+    created_at TIMESTAMP
+)
+''')
+
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS captions (
+    id INTEGER PRIMARY KEY,
+    image_id INTEGER,
+    caption TEXT,
+    FOREIGN KEY (image_id) REFERENCES images (id)
+)
+''')
+
+# 添加新列
+try:
+    cursor.execute("ALTER TABLE images ADD COLUMN local_path TEXT")
+    conn.commit()
+    print("已向images表添加local_path列")
+except sqlite3.OperationalError as e:
+    # 如果列已经存在，会抛出错误，可以安全忽略
+    if "duplicate column name" in str(e):
+        print("local_path列已存在")
+    else:
+        print(f"修改表结构时出错: {str(e)}")
+
+conn.commit()
+
+# 添加索引以提高性能
+try:
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_images_coco_id ON images(coco_id)")
+    print("已添加coco_id索引")
+except sqlite3.OperationalError as e:
+    print(f"添加索引时出错: {e}")
+
+conn.commit()
+
+# 加载COCO API
+print("加载COCO数据集...")
+try:
+    coco = COCO(annFile)
+    print("COCO数据集加载成功")
+except Exception as e:
+    print(f"加载COCO数据集失败: {str(e)}")
+    sys.exit(1)
+
+# 获取所有图像ID
+all_img_ids = coco.getImgIds()
+print(f"数据集中的图像总数: {len(all_img_ids)}")
+
+# 检查数据库中已有多少图片
+cursor.execute("SELECT coco_id FROM images")
+downloaded_ids = set(row[0] for row in cursor.fetchall())
+print(f"数据库中已有 {len(downloaded_ids)} 张图片")
+
+# 从所有ID中排除已下载的ID
+available_ids = [img_id for img_id in all_img_ids if img_id not in downloaded_ids]
+debug_print(f"可用ID数量: {len(available_ids)}")
+debug_print(f"已下载ID数量: {len(downloaded_ids)}")
+
+if not available_ids:
+    print("警告: 所有COCO图像已下载。如要重新下载，请先清空数据库或使用--force参数。")
+    if cmd_args.force:
+        print("使用--force参数，将重新下载部分图片...")
+        available_ids = all_img_ids  # 强制模式下使用所有ID
+    else:
+        sys.exit(0)
+
+# 设置随机种子，保证不同运行之间选择不同图片
+if cmd_args.random_seed is not None:
+    random.seed(cmd_args.random_seed)
+    print(f"使用指定的随机种子: {cmd_args.random_seed}")
+else:
+    # 使用当前时间戳作为种子，确保每次运行使用不同的种子
+    seed = int(time.time())
+    random.seed(seed)
+    print(f"使用当前时间戳作为随机种子: {seed}")
+
+# 获取用户指定的图片数量
+n = min(cmd_args.num_images, len(available_ids))
+if n < cmd_args.num_images:
+    print(f"警告: 只有 {n} 张新图像可用，少于请求的 {cmd_args.num_images} 张")
+
+# 随机选择图片IDs
+selected_img_ids = random.sample(available_ids, n)
+print(f"随机选择了 {n} 张图像进行处理")
+
+# 加载选中的图像信息
+selected_imgs = coco.loadImgs(selected_img_ids)
+
+# 下载图像的函数
+def download_image(url, save_path):
+    try:
+        response = requests.get(url, stream=True, timeout=30)
+        response.raise_for_status()  # 如果请求不成功则抛出异常
+        
+        with open(save_path, 'wb') as file:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    file.write(chunk)
+        return True
+    except Exception as e:
+        print(f"下载图像失败: {str(e)}")
+        return False
+
+# 处理每张图像
+print("\n开始处理图像和下载...")
+successful_downloads = 0
+
+for i, img_info in enumerate(tqdm(selected_imgs, desc="处理图像")):
+    img_id = img_info['id']
+    file_name = img_info.get('file_name', f"image_{img_id}.jpg")
+    width = img_info.get('width', 0)
+    height = img_info.get('height', 0)
+    
+    print(f"\n处理图像 {i+1}/{n}, ID: {img_id}")
+    
+    # 再次检查该图片ID是否已存在（以防在此过程中有其他进程添加）
+    cursor.execute("SELECT id FROM images WHERE coco_id = ?", (img_id,))
+    existing = cursor.fetchone()
+    
+    if existing and not cmd_args.force:
+        print(f"图像ID {img_id} 已在数据库中，跳过")
+        continue
+    
+    # 构建图像URL和保存路径
+    # COCO 2017数据集图像URL格式
+    img_url = f"http://images.cocodataset.org/train2017/{file_name}"
+    local_path = os.path.join(images_dir, file_name)
+    
+    # 下载图像
+    print(f"下载图像: {img_url}")
+    download_success = download_image(img_url, local_path)
+    
+    if download_success:
+        print(f"图像已下载并保存到: {local_path}")
+    else:
+        print(f"无法下载图像，仅保存元数据")
+        local_path = None
+    
+    # 如果图片已存在且使用--force，则先删除旧记录
+    if existing and cmd_args.force:
+        try:
+            # 先删除关联的标题
+            cursor.execute("DELETE FROM captions WHERE image_id = ?", (existing[0],))
+            # 再删除图片记录
+            cursor.execute("DELETE FROM images WHERE id = ?", (existing[0],))
+            print(f"已删除图像ID {img_id} 的旧记录")
+        except sqlite3.Error as e:
+            print(f"删除旧记录时出错: {e}")
+            conn.rollback()
+            continue
+    
+    # 将图像信息存入数据库
+    current_time = datetime.now()
+    try:
+        cursor.execute('''
+        INSERT INTO images (coco_id, file_name, width, height, local_path, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ''', (img_id, file_name, width, height, local_path, current_time))
+        
+        # 获取插入的图像ID
+        image_row_id = cursor.lastrowid
+        
+        # 获取该图像的所有标题
+        ann_ids = coco.getAnnIds(imgIds=img_id)
+        anns = coco.loadAnns(ann_ids)
+        
+        print(f"找到 {len(anns)} 个标题")
+        
+        # 将标题存入数据库
+        for j, ann in enumerate(anns):
+            caption = ann.get('caption', '')
+            print(f"  标题 {j+1}: {caption}")
+            
+            cursor.execute('''
+            INSERT INTO captions (image_id, caption)
+            VALUES (?, ?)
+            ''', (image_row_id, caption))
+        
+        conn.commit()
+        successful_downloads += 1
+        
+    except sqlite3.IntegrityError as e:
+        print(f"插入数据时出错 (可能是重复键): {e}")
+        conn.rollback()
+        # 如果下载了图片但插入失败，删除图片文件
+        if download_success and os.path.exists(local_path):
+            try:
+                os.remove(local_path)
+                print(f"由于数据库插入失败，已删除图片文件: {local_path}")
+            except:
+                pass
+    except Exception as e:
+        print(f"处理图像时出错: {e}")
+        conn.rollback()
+
+# 验证数据库内容
+print("\n验证数据库内容:")
+print("-" * 50)
+
+# 查询图像数量
+cursor.execute("SELECT COUNT(*) FROM images")
+image_count = cursor.fetchone()[0]
+print(f"数据库中的图像总数量: {image_count}")
+
+# 查询成功下载的图像数量
+cursor.execute("SELECT COUNT(*) FROM images WHERE local_path IS NOT NULL")
+downloaded_count = cursor.fetchone()[0]
+print(f"成功下载的图像数量: {downloaded_count}")
+
+# 查询标题数量
+cursor.execute("SELECT COUNT(*) FROM captions")
+caption_count = cursor.fetchone()[0]
+print(f"数据库中的标题数量: {caption_count}")
+
+# 查询本次运行新增的图片数量
+print(f"本次运行成功添加 {successful_downloads} 张新图片")
+
+# 显示图像和标题的样例
+cursor.execute('''
+SELECT i.id, i.coco_id, i.file_name, i.local_path, c.caption
+FROM images i
+JOIN captions c ON i.id = c.image_id
+ORDER BY i.id DESC
+LIMIT 5
+''')
+
+print("\n最近添加的图像和标题样例:")
+print("-" * 70)
+print("ID | COCO_ID | 文件名 | 本地路径 | 标题")
+print("-" * 70)
+
+for row in cursor.fetchall():
+    print(f"{row[0]} | {row[1]} | {row[2]} | {row[3]} | {row[4]}")
+
+# 关闭数据库连接
+conn.close()
+
+print("\n处理完成。数据已保存到数据库,图像已下载到本地。")
+print(f"数据库路径: {db_path}")
+print(f"图像保存路径: {images_dir}")

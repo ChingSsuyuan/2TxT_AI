@@ -45,7 +45,7 @@ except ImportError:
     from tqdm import tqdm
 
 print("="*70)
-print("从COCO数据集获取图片ID和标题信息并存入数据库")
+print("从COCO数据集获取动物图片并存入数据库")
 print("并下载图片到本地")
 print("="*70)
 
@@ -62,12 +62,20 @@ dataDir = 'coco_data'
 os.makedirs(os.path.join(dataDir, 'annotations'), exist_ok=True)
 dataType = 'train2017'
 annFile = f'{dataDir}/annotations/captions_{dataType}.json'
+instFile = f'{dataDir}/annotations/instances_{dataType}.json'
 
 # 检查注释文件是否存在
 if not os.path.exists(annFile):
     print(f"注释文件不存在: {annFile}")
     print("请从COCO官网下载注释文件,并放置在以下位置:")
     print(f"  {annFile}")
+    print("下载链接: http://images.cocodataset.org/annotations/annotations_trainval2017.zip")
+    sys.exit(1)
+
+if not os.path.exists(instFile):
+    print(f"实例分割注释文件不存在: {instFile}")
+    print("请从COCO官网下载注释文件,并放置在以下位置:")
+    print(f"  {instFile}")
     print("下载链接: http://images.cocodataset.org/annotations/annotations_trainval2017.zip")
     sys.exit(1)
 
@@ -78,7 +86,7 @@ print(f"创建/连接数据库: {db_path}")
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
-# 创建表 - 简化版本
+# 创建表 - 保持原始结构
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS images (
     id INTEGER PRIMARY KEY,
@@ -86,7 +94,8 @@ CREATE TABLE IF NOT EXISTS images (
     file_name TEXT,
     width INTEGER,
     height INTEGER,
-    created_at TIMESTAMP
+    created_at TIMESTAMP,
+    local_path TEXT
 )
 ''')
 
@@ -99,24 +108,10 @@ CREATE TABLE IF NOT EXISTS captions (
 )
 ''')
 
-# 添加新列
-try:
-    cursor.execute("ALTER TABLE images ADD COLUMN local_path TEXT")
-    conn.commit()
-    print("已向images表添加local_path列")
-except sqlite3.OperationalError as e:
-    # 如果列已经存在，会抛出错误，可以安全忽略
-    if "duplicate column name" in str(e):
-        print("local_path列已存在")
-    else:
-        print(f"修改表结构时出错: {str(e)}")
-
-conn.commit()
-
 # 添加索引以提高性能
 try:
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_images_coco_id ON images(coco_id)")
-    print("已添加coco_id索引")
+    print("已添加索引")
 except sqlite3.OperationalError as e:
     print(f"添加索引时出错: {e}")
 
@@ -126,14 +121,41 @@ conn.commit()
 print("加载COCO数据集...")
 try:
     coco = COCO(annFile)
+    coco_inst = COCO(instFile)
     print("COCO数据集加载成功")
 except Exception as e:
     print(f"加载COCO数据集失败: {str(e)}")
     sys.exit(1)
 
-# 获取所有图像ID
-all_img_ids = coco.getImgIds()
-print(f"数据集中的图像总数: {len(all_img_ids)}")
+# COCO数据集中的动物类别ID
+animal_category_ids = [
+    16,  # bird
+    17,  # cat
+    18,  # dog
+    19,  # horse
+    20,  # sheep
+    21,  # cow
+    22,  # elephant
+    23,  # bear
+    24,  # zebra
+    25,  # giraffe
+]
+
+# 获取动物类别的名称映射
+cat_info = coco_inst.loadCats(animal_category_ids)
+animal_category_names = {cat['id']: cat['name'] for cat in cat_info}
+
+# 获取包含动物的图像ID
+print("查找包含动物的图像...")
+animal_img_ids = []
+for cat_id in animal_category_ids:
+    cat_img_ids = coco_inst.getImgIds(catIds=[cat_id])
+    debug_print(f"类别 {animal_category_names[cat_id]} (ID: {cat_id}) 包含 {len(cat_img_ids)} 张图像")
+    animal_img_ids.extend(cat_img_ids)
+
+# 移除重复的图像ID
+animal_img_ids = list(set(animal_img_ids))
+print(f"共找到 {len(animal_img_ids)} 张包含动物的唯一图像")
 
 # 检查数据库中已有多少图片
 cursor.execute("SELECT coco_id FROM images")
@@ -141,15 +163,14 @@ downloaded_ids = set(row[0] for row in cursor.fetchall())
 print(f"数据库中已有 {len(downloaded_ids)} 张图片")
 
 # 从所有ID中排除已下载的ID
-available_ids = [img_id for img_id in all_img_ids if img_id not in downloaded_ids]
+available_ids = [img_id for img_id in animal_img_ids if img_id not in downloaded_ids]
 debug_print(f"可用ID数量: {len(available_ids)}")
-debug_print(f"已下载ID数量: {len(downloaded_ids)}")
 
 if not available_ids:
-    print("警告: 所有COCO图像已下载。如要重新下载，请先清空数据库或使用--force参数。")
+    print("警告: 所有动物图像已下载。如要重新下载，请先清空数据库或使用--force参数。")
     if cmd_args.force:
         print("使用--force参数，将重新下载部分图片...")
-        available_ids = all_img_ids  # 强制模式下使用所有ID
+        available_ids = animal_img_ids  # 强制模式下使用所有ID
     else:
         sys.exit(0)
 
@@ -170,7 +191,7 @@ if n < cmd_args.num_images:
 
 # 随机选择图片IDs
 selected_img_ids = random.sample(available_ids, n)
-print(f"随机选择了 {n} 张图像进行处理")
+print(f"随机选择了 {n} 张动物图像进行处理")
 
 # 加载选中的图像信息
 selected_imgs = coco.loadImgs(selected_img_ids)
@@ -190,9 +211,23 @@ def download_image(url, save_path):
         print(f"下载图像失败: {str(e)}")
         return False
 
+# 获取图像包含的动物类别
+def get_image_animal_categories(img_id):
+    ann_ids = coco_inst.getAnnIds(imgIds=img_id)
+    anns = coco_inst.loadAnns(ann_ids)
+    
+    category_ids = []
+    for ann in anns:
+        cat_id = ann.get('category_id')
+        if cat_id in animal_category_ids:
+            category_ids.append(cat_id)
+    
+    return list(set(category_ids))  # 移除重复的类别ID
+
 # 处理每张图像
 print("\n开始处理图像和下载...")
 successful_downloads = 0
+animal_stats = {}  # 用于统计动物出现次数
 
 for i, img_info in enumerate(tqdm(selected_imgs, desc="处理图像")):
     img_id = img_info['id']
@@ -209,6 +244,20 @@ for i, img_info in enumerate(tqdm(selected_imgs, desc="处理图像")):
     if existing and not cmd_args.force:
         print(f"图像ID {img_id} 已在数据库中，跳过")
         continue
+    
+    # 获取图像包含的动物类别ID
+    animal_category_ids_in_image = get_image_animal_categories(img_id)
+    if not animal_category_ids_in_image:
+        print(f"图像ID {img_id} 未找到动物类别，跳过")
+        continue
+    
+    # 获取动物名称
+    animal_names = [animal_category_names.get(cat_id, f"unknown") for cat_id in animal_category_ids_in_image]
+    print(f"图像包含的动物: {', '.join(animal_names)}")
+    
+    # 更新动物统计信息
+    for name in animal_names:
+        animal_stats[name] = animal_stats.get(name, 0) + 1
     
     # 构建图像URL和保存路径
     # COCO 2017数据集图像URL格式
@@ -249,21 +298,13 @@ for i, img_info in enumerate(tqdm(selected_imgs, desc="处理图像")):
         # 获取插入的图像ID
         image_row_id = cursor.lastrowid
         
-        # 获取该图像的所有标题
-        ann_ids = coco.getAnnIds(imgIds=img_id)
-        anns = coco.loadAnns(ann_ids)
-        
-        print(f"找到 {len(anns)} 个标题")
-        
-        # 将标题存入数据库
-        for j, ann in enumerate(anns):
-            caption = ann.get('caption', '')
-            print(f"  标题 {j+1}: {caption}")
-            
+        # 保存动物名称到标题表中
+        for name in animal_names:
             cursor.execute('''
             INSERT INTO captions (image_id, caption)
             VALUES (?, ?)
-            ''', (image_row_id, caption))
+            ''', (image_row_id, name))  # 直接保存动物名称
+            print(f"  添加动物名称: {name}")
         
         conn.commit()
         successful_downloads += 1
@@ -296,26 +337,46 @@ cursor.execute("SELECT COUNT(*) FROM images WHERE local_path IS NOT NULL")
 downloaded_count = cursor.fetchone()[0]
 print(f"成功下载的图像数量: {downloaded_count}")
 
-# 查询标题数量
+# 查询动物名称数量
 cursor.execute("SELECT COUNT(*) FROM captions")
 caption_count = cursor.fetchone()[0]
-print(f"数据库中的标题数量: {caption_count}")
+print(f"数据库中的动物名称数量: {caption_count}")
 
 # 查询本次运行新增的图片数量
 print(f"本次运行成功添加 {successful_downloads} 张新图片")
 
-# 显示图像和标题的样例
+# 显示动物统计信息
+print("\n本次下载的动物图片统计:")
+print("-" * 50)
+for animal, count in sorted(animal_stats.items(), key=lambda x: x[1], reverse=True):
+    print(f"  {animal}: {count}张图片")
+
+# 统计数据库中各种动物的数量
+cursor.execute('''
+SELECT caption, COUNT(*) as count
+FROM captions
+GROUP BY caption
+ORDER BY count DESC
+''')
+
+print("\n数据库中各动物类别统计:")
+print("-" * 50)
+for row in cursor.fetchall():
+    if row[0] in animal_category_names.values():  # 确保是动物名称
+        print(f"  {row[0]}: {row[1]}张图片")
+
+# 显示图像和动物名称的样例
 cursor.execute('''
 SELECT i.id, i.coco_id, i.file_name, i.local_path, c.caption
 FROM images i
 JOIN captions c ON i.id = c.image_id
 ORDER BY i.id DESC
-LIMIT 5
+LIMIT 10
 ''')
 
-print("\n最近添加的图像和标题样例:")
+print("\n最近添加的图像和动物名称样例:")
 print("-" * 70)
-print("ID | COCO_ID | 文件名 | 本地路径 | 标题")
+print("图像ID | COCO_ID | 文件名 | 本地路径 | 动物名称")
 print("-" * 70)
 
 for row in cursor.fetchall():
