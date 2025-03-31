@@ -57,19 +57,15 @@ def main():
     parser = argparse.ArgumentParser(description='COCO图像标题处理流水线')
     parser.add_argument('--num-images', type=int, default=20, 
                         help='要下载的图片数量 (默认: 20)')
+    parser.add_argument('--force', action='store_true',
+                        help='强制重新下载图片，即使数据库已有数据')
+    parser.add_argument('--random-seed', type=int, default=None,
+                        help='随机种子，用于图片选择 (默认: 使用系统时间)')
+    parser.add_argument('--clean', action='store_true',
+                        help='在处理前清空现有数据库')
     args = parser.parse_args()
     
-    num_images = args.num_images
-    
-    # 定义要运行的脚本及其描述
-    scripts = [
-        ("coco-database-creation.py", "第1步: 创建COCO数据库并下载图片", ["--num-images", str(num_images)]),
-        ("vocabulary-builder.py", "第2步: 构建词汇表", None),
-        ("vocab-to-database.py", "第3步: 将词汇表导入数据库", None),
-        ("remove-stopwords.py", "第4步: 从词汇表中移除停用词", None)
-    ]
-    
-    # 创建目录记录结果
+    # 设置路径
     results_dir = "coco_processing_results"
     os.makedirs(results_dir, exist_ok=True)
     
@@ -81,7 +77,11 @@ def main():
     original_stderr = sys.stderr
     
     print(f"处理日志将保存到: {log_file_path}")
-    print(f"设置下载图片数量: {num_images}")
+    print(f"设置下载图片数量: {args.num_images}")
+    if args.force:
+        print("已启用强制下载模式")
+    if args.random_seed is not None:
+        print(f"使用随机种子: {args.random_seed}")
     
     try:
         # 将输出重定向到日志文件
@@ -91,8 +91,34 @@ def main():
         
         print("COCO图像标题处理流水线")
         print(f"开始时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"下载图片数量: {num_images}")
+        print(f"下载图片数量: {args.num_images}")
+        if args.force:
+            print("强制下载模式: 启用")
+        if args.random_seed is not None:
+            print(f"随机种子: {args.random_seed}")
         print("="*80)
+        
+        # 如果需要清空数据库
+        if args.clean:
+            print("\n清空现有数据库...")
+            clean_success = run_script("clean-database.py", "清空数据库和图片", ["--auto-confirm"])
+            if not clean_success:
+                print("警告: 清空数据库操作失败，但将继续执行流水线")
+        
+        # 定义要运行的脚本及其描述
+        scripts = []
+        
+        # COCO数据库创建和图片下载
+        coco_db_args = ["--num-images", str(args.num_images)]
+        if args.force:
+            coco_db_args.append("--force")
+        if args.random_seed is not None:
+            coco_db_args.extend(["--random-seed", str(args.random_seed)])
+        
+        scripts.append(("coco-database-creation.py", "第1步: 创建COCO数据库并下载图片", coco_db_args))
+        scripts.append(("vocabulary-builder.py", "第2步: 构建词汇表", None))
+        scripts.append(("vocab-to-database.py", "第3步: 将词汇表导入数据库", None))
+        scripts.append(("remove-stopwords.py", "第4步: 从词汇表中移除停用词", None))
         
         # 顺序运行所有脚本
         for i, (script, description, script_args) in enumerate(scripts):
