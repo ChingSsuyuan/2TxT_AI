@@ -1,2 +1,4 @@
 coco_data/
 .DS_Store
+myenv
+.venv
