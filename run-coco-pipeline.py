@@ -3,6 +3,7 @@ import sys
 import subprocess
 import time
 import argparse
+import random
 
 def run_script(script_path, description, args=None):
     """运行给定的Python脚本并检查执行状态
@@ -63,7 +64,14 @@ def main():
                         help='随机种子，用于图片选择 (默认: 使用系统时间)')
     parser.add_argument('--clean', action='store_true',
                         help='在处理前清空现有数据库')
+    parser.add_argument('--debug', action='store_true',
+                        help='启用调试输出')
     args = parser.parse_args()
+    
+    # 如果未指定随机种子，确保每次运行使用不同种子
+    if args.random_seed is None:
+        args.random_seed = int(time.time())
+        print(f"使用当前时间戳作为随机种子: {args.random_seed}")
     
     # 设置路径
     results_dir = "coco_processing_results"
@@ -80,8 +88,9 @@ def main():
     print(f"设置下载图片数量: {args.num_images}")
     if args.force:
         print("已启用强制下载模式")
-    if args.random_seed is not None:
-        print(f"使用随机种子: {args.random_seed}")
+    print(f"使用随机种子: {args.random_seed}")
+    if args.debug:
+        print("已启用调试模式")
     
     try:
         # 将输出重定向到日志文件
@@ -94,8 +103,9 @@ def main():
         print(f"下载图片数量: {args.num_images}")
         if args.force:
             print("强制下载模式: 启用")
-        if args.random_seed is not None:
-            print(f"随机种子: {args.random_seed}")
+        print(f"随机种子: {args.random_seed}")
+        if args.debug:
+            print("调试模式: 启用")
         print("="*80)
         
         # 如果需要清空数据库
@@ -104,16 +114,17 @@ def main():
             clean_success = run_script("clean-database.py", "清空数据库和图片", ["--auto-confirm"])
             if not clean_success:
                 print("警告: 清空数据库操作失败，但将继续执行流水线")
+                time.sleep(2)  # 暂停，确保用户看到警告
         
         # 定义要运行的脚本及其描述
         scripts = []
         
         # COCO数据库创建和图片下载
-        coco_db_args = ["--num-images", str(args.num_images)]
+        coco_db_args = ["--num-images", str(args.num_images), "--random-seed", str(args.random_seed)]
         if args.force:
             coco_db_args.append("--force")
-        if args.random_seed is not None:
-            coco_db_args.extend(["--random-seed", str(args.random_seed)])
+        if args.debug:
+            coco_db_args.append("--debug")
         
         scripts.append(("coco-database-creation.py", "第1步: 创建COCO数据库并下载图片", coco_db_args))
         scripts.append(("vocabulary-builder.py", "第2步: 构建词汇表", None))
