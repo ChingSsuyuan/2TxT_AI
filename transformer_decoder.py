@@ -603,15 +603,18 @@ def train_model(db_path, output_dir, num_epochs=10, learning_rate=0.0001, num_va
     # 创建数据集
     dataset = COCOImageCaptionDataset(db_path=db_path)
     
-    # 获取所有唯一图像ID
-    image_ids = set()
-    for caption_id, image_id, _ in dataset.captions_data:
-        image_ids.add(image_id)
+    # 确保使用所有图像 - 获取所有唯一图像ID
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.cursor()
+        # 直接从数据库查询所有图像ID
+        cursor.execute("SELECT id FROM images")
+        all_image_ids = [row[0] for row in cursor.fetchall()]
+    
+    print(f"数据库中共有 {len(all_image_ids)} 张图片")
     
     # 随机选择验证图像ID
     import random
     random.seed(42)  # 设置随机种子以保证可重复性
-    all_image_ids = list(image_ids)
     num_val_samples = min(num_val_samples, len(all_image_ids))  # 确保验证样本数不超过总图像数
     val_image_ids = set(random.sample(all_image_ids, num_val_samples))
     
@@ -619,6 +622,7 @@ def train_model(db_path, output_dir, num_epochs=10, learning_rate=0.0001, num_va
     train_indices = []
     val_indices = []
     
+    # 遍历所有标题，根据图像ID分配到训练集或验证集
     for i, (_, image_id, _) in enumerate(dataset.captions_data):
         if image_id in val_image_ids:
             val_indices.append(i)
@@ -630,11 +634,10 @@ def train_model(db_path, output_dir, num_epochs=10, learning_rate=0.0001, num_va
     train_dataset = Subset(dataset, train_indices)
     val_dataset = Subset(dataset, val_indices)
     
-    print(f"训练集大小: {len(train_dataset)} 条标题")
-    print(f"验证集大小: {len(val_dataset)} 条标题")
+    print(f"训练集大小: {len(train_dataset)} 条标题 (对应 {len(all_image_ids) - len(val_image_ids)} 张图片)")
+    print(f"验证集大小: {len(val_indices)} 条标题 (对应 {len(val_image_ids)} 张图片)")
     
     # 创建数据加载器 (num_workers=0避免SQLite多进程问题)
-    # 减小batch_size以适应小数据集
     actual_batch_size = min(BATCH_SIZE, len(train_dataset))
     if actual_batch_size < BATCH_SIZE:
         print(f"调整batch_size为 {actual_batch_size} (原计划: {BATCH_SIZE})")
