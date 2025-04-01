@@ -66,6 +66,11 @@ def main():
                         help='在处理前清空现有数据库')
     parser.add_argument('--debug', action='store_true',
                         help='启用调试输出')
+    parser.add_argument('--skip-encoding', action='store_true',
+                        help='跳过图像编码步骤')
+    parser.add_argument('--resnet-model', type=str, default='resnet50',
+                        choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'],
+                        help='使用的ResNet模型类型 (默认: resnet50)')
     args = parser.parse_args()
     
     # 如果未指定随机种子，确保每次运行使用不同种子
@@ -91,6 +96,10 @@ def main():
     print(f"使用随机种子: {args.random_seed}")
     if args.debug:
         print("已启用调试模式")
+    if not args.skip_encoding:
+        print(f"将使用 {args.resnet_model} 进行图像编码")
+    else:
+        print("已跳过图像编码步骤")
     
     try:
         # 将输出重定向到日志文件
@@ -106,6 +115,8 @@ def main():
         print(f"随机种子: {args.random_seed}")
         if args.debug:
             print("调试模式: 启用")
+        if not args.skip_encoding:
+            print(f"使用 {args.resnet_model} 进行图像编码")
         print("="*80)
         
         # 如果需要清空数据库
@@ -130,6 +141,13 @@ def main():
         scripts.append(("vocabulary-builder.py", "第2步: 构建词汇表", None))
         scripts.append(("vocab-to-database.py", "第3步: 将词汇表导入数据库", None))
         scripts.append(("remove-stopwords.py", "第4步: 从词汇表中移除停用词", None))
+        
+        # 添加图像编码步骤
+        if not args.skip_encoding:
+            image_encoder_args = ["--model", args.resnet_model]
+            if args.debug:
+                image_encoder_args.append("--debug")
+            scripts.append(("image-encoder-db.py", "第5步: 使用ResNet编码图像特征", image_encoder_args))
         
         # 顺序运行所有脚本
         for i, (script, description, script_args) in enumerate(scripts):

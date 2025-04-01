@@ -7,7 +7,9 @@ import sqlite3
 import os
 import numpy as np
 import time
+import argparse
 from tqdm import tqdm  
+
 class ImageEncoder:
     """图像编码器基类"""
     def __init__(self, output_feature_dim):
@@ -179,7 +181,7 @@ class DatabaseManager:
         return self.fetchall("SELECT id, file_name FROM images")
 
 
-def encode_all_images(db_path, images_dir, model_name='resnet50', batch_size=16):
+def encode_all_images(db_path, images_dir, model_name='resnet50', batch_size=16, debug=False):
     """
     编码所有图像并将特征存储到数据库
     
@@ -188,6 +190,7 @@ def encode_all_images(db_path, images_dir, model_name='resnet50', batch_size=16)
         images_dir: 图像目录路径
         model_name: 使用的ResNet模型类型
         batch_size: 批处理大小
+        debug: 是否启用调试输出
     """
     # 初始化数据库管理器
     db_manager = DatabaseManager(db_path)
@@ -250,6 +253,9 @@ def encode_all_images(db_path, images_dir, model_name='resnet50', batch_size=16)
             image_features = features[j:j+1]  # 保持批次维度
             if db_manager.insert_features(table_name, image_id, image_features):
                 success_count += 1
+                
+            if debug and j == 0:  # 在调试模式下显示第一个特征的样本
+                print(f"特征样本 (image_id={image_id}, 前5个值): {image_features[0, :5].cpu().numpy()}")
     
     elapsed_time = time.time() - start_time
     print(f"编码完成: {success_count}/{total_images} 图像成功处理")
@@ -299,31 +305,50 @@ def retrieve_features(db_path, model_name, image_id):
 
 
 def main():
-    # 配置路径
-    db_path = "coco_image_title_data/image_title_database.db"
-    images_dir = "coco_image_title_data/images"
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(description='使用ResNet编码图像并存储特征')
+    parser.add_argument('--db-path', type=str, default="coco_image_title_data/image_title_database.db",
+                        help='数据库文件路径')
+    parser.add_argument('--images-dir', type=str, default="coco_image_title_data/images",
+                        help='图像目录路径')
+    parser.add_argument('--model', type=str, default='resnet50',
+                        choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'],
+                        help='使用的ResNet模型类型')
+    parser.add_argument('--batch-size', type=int, default=16,
+                        help='批处理大小')
+    parser.add_argument('--debug', action='store_true',
+                        help='启用调试输出')
+    parser.add_argument('--test-image-id', type=int,
+                        help='测试特定图像ID的特征检索')
+    
+    args = parser.parse_args()
     
     # 检查路径是否存在
-    if not os.path.exists(db_path):
-        print(f"错误: 数据库文件不存在 {db_path}")
+    if not os.path.exists(args.db_path):
+        print(f"错误: 数据库文件不存在 {args.db_path}")
         return
     
-    if not os.path.exists(images_dir):
-        print(f"错误: 图像目录不存在 {images_dir}")
+    if not os.path.exists(args.images_dir):
+        print(f"错误: 图像目录不存在 {args.images_dir}")
         return
     
     # 编码所有图像
-    model_name = 'resnet50'  # 也可以选择 'resnet18', 'resnet34', 'resnet101', 'resnet152'
-    encode_all_images(db_path, images_dir, model_name)
+    encode_all_images(
+        args.db_path, 
+        args.images_dir, 
+        model_name=args.model, 
+        batch_size=args.batch_size,
+        debug=args.debug
+    )
     
-    # 测试检索特定图像的特征
-    test_image_id = 9  # 这是之前提到的 000000005802.jpg 的ID
-    features = retrieve_features(db_path, model_name, test_image_id)
-    
-    if features is not None:
-        print(f"\n检索图像ID {test_image_id} 的特征:")
-        print(f"特征形状: {features.shape}")
-        print(f"特征样本 (前5个值): {features[0, :5]}")
+    # 如果指定了测试图像ID，则测试特征检索
+    if args.test_image_id:
+        features = retrieve_features(args.db_path, args.model, args.test_image_id)
+        
+        if features is not None:
+            print(f"\n检索图像ID {args.test_image_id} 的特征:")
+            print(f"特征形状: {features.shape}")
+            print(f"特征样本 (前5个值): {features[0, :5]}")
 
 
 if __name__ == "__main__":
