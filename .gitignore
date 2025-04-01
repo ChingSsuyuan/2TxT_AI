@@ -3,3 +3,4 @@ coco_data/
 myenv
 .venv
 coco_image_title_data/images
+model_output
