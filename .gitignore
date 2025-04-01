@@ -5,3 +5,4 @@ myenv
 model_output
 coco_processing_results
 coco_image_title_data
+coco_image_title_data/image_title_database.db
