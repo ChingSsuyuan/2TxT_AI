@@ -2,9 +2,6 @@ coco_data/
 .DS_Store
 myenv
 .venv
-coco_image_title_data/images
 model_output
-coco_image_title_data/vocabulary
-coco_image_title_data/image_title_database.db
 coco_processing_results
 coco_image_title_data
