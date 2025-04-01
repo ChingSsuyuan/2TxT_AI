@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图像关键词生成器</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .upload-section, .result-section {
+            flex: 1;
+            min-width: 300px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .upload-area {
+            border: 2px dashed #3498db;
+            border-radius: 5px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .upload-area:hover {
+            background-color: #f0f8ff;
+        }
+        .upload-area.highlight {
+            background-color: #e3f2fd;
+        }
+        .preview-container {
+            margin-top: 20px;
+        }
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 5px;
+            display: block;
+            margin: 0 auto;
+        }
+        .keyword-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .keyword {
+            background-color: #3498db;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            font-size: 0.9rem;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3498db;
+            animation: spin 1s linear infinite;
+        }
+        .error-message {
+            color: #e74c3c;
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #fef2f2;
+            border-radius: 5px;
+            border: 1px solid #f8d7da;
+        }
+        .hidden {
+            display: none;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .clear-btn {
+            background-color: #e74c3c;
+        }
+        .clear-btn:hover {
+            background-color: #c0392b;
+        }
+        .button-group {
+            display: flex;
+            margin-top: 15px;
+        }
+        .result-caption {
+            margin-top: 10px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 1rem;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>图像关键词生成器</h1>
+        <p>上传图片，自动生成描述性关键词</p>
+    </header>
+
+    <div class="container">
+        <section class="upload-section">
+            <h2>上传图片</h2>
+            <div id="upload-area" class="upload-area">
+                <p>拖放图片到这里或点击上传</p>
+                <input type="file" id="file-input" accept="image/*" style="display: none;">
+            </div>
+
+            <div class="preview-container hidden" id="preview-container">
+                <h3>预览</h3>
+                <img id="preview-image" class="preview-image" src="" alt="预览图片">
+                <div class="button-group">
+                    <button id="generate-btn">生成关键词</button>
+                    <button id="clear-btn" class="clear-btn">清空图片</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="result-section">
+            <h2>生成结果</h2>
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+            </div>
+            <div id="error-container" class="error-message hidden"></div>
+            <div id="result-container" class="hidden">
+                <h3>关键词</h3>
+                <div id="keyword-container" class="keyword-container"></div>
+                <div id="result-caption" class="result-caption"></div>
+            </div>
+            <div id="tips-container">
+                <p>上传图片后，系统将自动提取最相关的关键词。</p>
+                <p>这些关键词可用于:</p>
+                <ul>
+                    <li>图片搜索优化</li>
+                    <li>内容标记</li>
+                    <li>自动生成图片描述</li>
+                    <li>内容分类</li>
+                </ul>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <p>图像关键词生成系统 &copy; 2025</p>
+    </footer>
+
+    <script>
+        // DOM元素
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const previewContainer = document.getElementById('preview-container');
+        const previewImage = document.getElementById('preview-image');
+        const generateBtn = document.getElementById('generate-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const resultContainer = document.getElementById('result-container');
+        const keywordContainer = document.getElementById('keyword-container');
+        const loadingEl = document.getElementById('loading');
+        const errorContainer = document.getElementById('error-container');
+        const tipsContainer = document.getElementById('tips-container');
+        const resultCaption = document.getElementById('result-caption');
+
+        // API端点 (根据你的部署环境进行修改)
+        const API_ENDPOINT = 'http://localhost:5001/api/keywords';
+
+        // 点击上传区域触发文件选择
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // 监听文件选择变化
+        fileInput.addEventListener('change', handleFileSelect);
+
+        // 处理拖放
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('highlight');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('highlight');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('highlight');
+            
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        // 生成按钮点击事件
+        generateBtn.addEventListener('click', generateKeywords);
+
+        // 清空按钮点击事件
+        clearBtn.addEventListener('click', clearImage);
+
+        // 处理文件选择
+        function handleFileSelect(e) {
+            if (e.target.files.length) {
+                handleFile(e.target.files[0]);
+            }
+        }
+
+        // 处理文件
+        function handleFile(file) {
+            // 验证文件类型
+            if (!file.type.match('image.*')) {
+                showError('请选择图片文件');
+                return;
+            }
+
+            // 创建预览
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                previewContainer.classList.remove('hidden');
+                
+                // 重置结果区域
+                resultContainer.classList.add('hidden');
+                errorContainer.classList.add('hidden');
+                tipsContainer.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 清空图片
+        function clearImage() {
+            // 清除文件输入
+            fileInput.value = '';
+            
+            // 隐藏预览容器
+            previewContainer.classList.add('hidden');
+            
+            // 重置结果区域
+            resultContainer.classList.add('hidden');
+            errorContainer.classList.add('hidden');
+            tipsContainer.classList.remove('hidden');
+        }
+
+        // 生成关键词
+        async function generateKeywords() {
+            // 获取图片
+            const imageFile = fileInput.files[0];
+            if (!imageFile) {
+                showError('请先选择图片');
+                return;
+            }
+
+            // 准备表单数据
+            const formData = new FormData();
+            formData.append('image', imageFile);
+
+            // 显示加载状态
+            loadingEl.classList.remove('hidden');
+            errorContainer.classList.add('hidden');
+            resultContainer.classList.add('hidden');
+            tipsContainer.classList.add('hidden');
+            generateBtn.disabled = true;
+            clearBtn.disabled = true;
+
+            try {
+                // 发送请求
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(`服务器错误: ${response.status} - ${data.error || '未知错误'}`);
+                }
+                
+                // 显示结果
+                displayKeywords(data.keywords);
+            } catch (error) {
+                showError(`处理失败: ${error.message}`);
+            } finally {
+                // 隐藏加载状态
+                loadingEl.classList.add('hidden');
+                generateBtn.disabled = false;
+                clearBtn.disabled = false;
+            }
+        }
+
+        // 显示关键词
+        function displayKeywords(keywords) {
+            // 清空旧的关键词
+            keywordContainer.innerHTML = '';
+            
+            // 添加新关键词
+            keywords.forEach(keyword => {
+                const keywordEl = document.createElement('span');
+                keywordEl.className = 'keyword';
+                keywordEl.textContent = keyword;
+                keywordContainer.appendChild(keywordEl);
+            });
+            
+            // 显示结果区域
+            resultContainer.classList.remove('hidden');
+            tipsContainer.classList.add('hidden');
+            
+            // 显示时间戳
+            const now = new Date();
+            resultCaption.textContent = `生成于 ${now.toLocaleString()}`;
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            errorContainer.textContent = message;
+            errorContainer.classList.remove('hidden');
+            loadingEl.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  image-keywords-api:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./uploaded_images:/app/uploaded_images
+    environment:
+      - MODEL_PATH=/app/model/best_model.pth
+      - DB_PATH=/app/data/image_title_database.db
+      - MAX_KEYWORDS=3
+      - TEMPERATURE=0.7
+      - DEBUG=False
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G

@@ -39,7 +39,7 @@ HIDDEN_DIM = 2048    # 前馈网络隐藏层维度
 NUM_DECODER_LAYERS = 6  # Transformer解码器层数
 NUM_HEADS = 8        # 多头注意力的头数
 DROPOUT = 0.1
-MAX_CAPTION_LENGTH = 50  # 最大标题长度
+MAX_CAPTION_LENGTH = 10  # 最大标题长度
 FEATURE_DIM = 2048   # ResNet50特征维度
 
 # 自定义数据集类
