@@ -698,7 +698,7 @@ def train_model(db_path, output_dir, num_epochs=10, learning_rate=0.0001, num_va
         cursor.execute("SELECT id FROM images")
         all_image_ids = [row[0] for row in cursor.fetchall()]
     
-    print(f"数据库中共有 {len(all_image_ids)} 张图片")
+    print(f"The database contains a total of {len(all_image_ids)} pictures")
     
     # 随机选择验证图像ID
     import random
@@ -787,12 +787,12 @@ def train_model(db_path, output_dir, num_epochs=10, learning_rate=0.0001, num_va
             'val_loss': val_loss,
         }, os.path.join(output_dir, 'latest_model.pth'))
     
-    print("训练完成!")
+    print("Training complete!")
     return model
 
 # 修改后的推理函数 - 提取关键词并计算匹配度
 def generate_captions(model, dataset, dataloader, device, num_samples=5):
-    """生成标题并提取关键词，与真实标题的关键词进行比较
+    """Generate headlines and extract keywords and compare them with the keywords of the real headline
     
     Args:
         model: 模型
@@ -878,45 +878,45 @@ if __name__ == "__main__":
     # 生成标题关键词并评估
     results = generate_captions(model, dataset, test_dataloader, device, num_samples=5)
     
-    # 打印关键词匹配结果
-    print("\n关键词匹配结果:")
+    # 打印Keyword Matching Results
+    print("\nKeyword Matching Results:")
     print("=" * 50)
     
     total_score = 0
     for i, item in enumerate(results):
-        print(f"样本 {i+1}:")
-        print(f"图像ID: {item['image_id']}")
-        print(f"真实标题: {item['true_caption']}")
-        print(f"提取关键词: {', '.join(item['true_keywords'])}")
-        print(f"生成标题: {item['generated_caption']}")
-        print(f"生成关键词: {', '.join(item['generated_keywords'])}")
-        print(f"匹配关键词: {', '.join(item['matched_keywords'])}")
-        print(f"匹配分数: {item['match_score']:.2f}")
+        print(f"sample {i+1}:")
+        print(f"Image_ID: {item['image_id']}")
+        print(f"Original Title: {item['true_caption']}")
+        print(f"Extracted keywords: {', '.join(item['true_keywords'])}")
+        print(f"Generated Title: {item['generated_caption']}")
+        print(f"Generated Keywords: {', '.join(item['generated_keywords'])}")
+        print(f"Match Keywords: {', '.join(item['matched_keywords'])}")
+        print(f"Score: {item['match_score']:.2f}")
         print("-" * 50)
         
         total_score += item['match_score']
     
     # 计算平均匹配分数
     avg_score = total_score / len(results) if results else 0
-    print(f"平均关键词匹配分数: {avg_score:.2f}")
+    print(f"Average Keyword Match Score: {avg_score:.2f}")
     
     # 保存结果到文件
     result_file = os.path.join(output_dir, "keyword_matching_results.txt")
     with open(result_file, "w") as f:
-        f.write("关键词匹配结果:\n")
+        f.write("Keyword Matching Results:\n")
         f.write("=" * 50 + "\n")
         
         for i, item in enumerate(results):
-            f.write(f"样本 {i+1}:\n")
-            f.write(f"图像ID: {item['image_id']}\n")
-            f.write(f"真实标题: {item['true_caption']}\n")
-            f.write(f"提取关键词: {', '.join(item['true_keywords'])}\n")
-            f.write(f"生成标题: {item['generated_caption']}\n")
-            f.write(f"生成关键词: {', '.join(item['generated_keywords'])}\n")
-            f.write(f"匹配关键词: {', '.join(item['matched_keywords'])}\n")
-            f.write(f"匹配分数: {item['match_score']:.2f}\n")
+            f.write(f"sample {i+1}:\n")
+            f.write(f"Image ID: {item['image_id']}\n")
+            f.write(f"Original Title: {item['true_caption']}\n")
+            f.write(f"Extracted keywords: {', '.join(item['true_keywords'])}\n")
+            f.write(f"Generated Title: {item['generated_caption']}\n")
+            f.write(f"Generated Keywords: {', '.join(item['generated_keywords'])}\n")
+            f.write(f"Match Keywords: {', '.join(item['matched_keywords'])}\n")
+            f.write(f"Score: {item['match_score']:.2f}\n")
             f.write("-" * 50 + "\n")
         
-        f.write(f"\n平均关键词匹配分数: {avg_score:.2f}\n")
+        f.write(f"\nAverage Keyword Match Score: {avg_score:.2f}\n")
     
-    print(f"结果已保存到: {result_file}")
+    print(f"The results have been saved to: {result_file}")
