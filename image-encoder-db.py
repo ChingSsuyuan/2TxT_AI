@@ -29,10 +29,6 @@ class CLIPEncoder:
     def preprocess_image(self, image_path):
         """预处理图像文件为张量"""
         try:
-            if not os.path.exists(image_path):
-                print(f"文件不存在: {image_path}")
-                return None
-                
             image = Image.open(image_path).convert('RGB')
             image_tensor = self.preprocess(image).unsqueeze(0).to(self.device)
             return image_tensor
@@ -89,24 +85,23 @@ class DatabaseManager:
         if cursor.fetchone():
             self.execute(f"DROP TABLE {table_name}")
         
-        # 创建表
+        # 创建表 - 由于我们现在是从目录扫描图像，表结构略有不同
         self.execute(f"""
         CREATE TABLE {table_name} (
             id INTEGER PRIMARY KEY,
-            image_id INTEGER NOT NULL,
+            file_name TEXT NOT NULL,
             features BLOB NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (image_id) REFERENCES images(id)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """)
         
         # 创建索引
-        self.execute(f"CREATE INDEX idx_{table_name}_image_id ON {table_name}(image_id)")
+        self.execute(f"CREATE INDEX idx_{table_name}_file_name ON {table_name}(file_name)")
         
         print(f"已创建表 {table_name}")
         return table_name
     
-    def insert_features(self, table_name, image_id, features):
+    def insert_features(self, table_name, file_name, features):
         """将特征向量插入数据库"""
         if features is None:
             return False
@@ -119,21 +114,53 @@ class DatabaseManager:
         
         try:
             self.execute(
-                f"INSERT INTO {table_name} (image_id, features) VALUES (?, ?)",
-                (image_id, features_blob)
+                f"INSERT INTO {table_name} (file_name, features) VALUES (?, ?)",
+                (file_name, features_blob)
             )
             return True
         except Exception as e:
-            print(f"插入特征时出错 (image_id={image_id}): {str(e)}")
+            print(f"插入特征时出错 (file_name={file_name}): {str(e)}")
             return False
+            
+    def get_image_id_by_filename(self, file_name):
+        """通过文件名获取图像ID（如果在images表中存在）"""
+        try:
+            results = self.fetchall(
+                "SELECT id FROM images WHERE file_name = ?",
+                (file_name,)
+            )
+            if results:
+                return results[0]['id']
+            return None
+        except:
+            return None
+
+
+def scan_images_directory():
+    """扫描图像目录中的所有图像文件"""
+    supported_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif'}
+    image_files = []
     
-    def get_image_paths(self):
-        """获取所有图像的ID和路径"""
-        return self.fetchall("SELECT id, file_name FROM images")
+    # 检查目录是否存在
+    if not os.path.exists(IMAGES_DIR):
+        print(f"错误: 图像目录不存在 {IMAGES_DIR}")
+        return []
+    
+    # 遍历目录中的所有文件
+    for file in os.listdir(IMAGES_DIR):
+        file_path = os.path.join(IMAGES_DIR, file)
+        if os.path.isfile(file_path):
+            # 检查文件扩展名
+            _, ext = os.path.splitext(file.lower())
+            if ext in supported_extensions:
+                image_files.append(file)
+    
+    print(f"在目录中找到 {len(image_files)} 个图像文件")
+    return image_files
 
 
 def encode_all_images():
-    """使用CLIP编码所有图像并将特征存储到数据库"""
+    """扫描目录并使用CLIP编码所有图像"""
     # 初始化数据库管理器和编码器
     db_manager = DatabaseManager()
     encoder = CLIPEncoder()
@@ -141,50 +168,37 @@ def encode_all_images():
     # 创建特征表
     table_name = db_manager.create_features_table()
     
-    # 获取所有图像路径
-    images = db_manager.get_image_paths()
-    total_images = len(images)
-    print(f"找到 {total_images} 张图像")
-    
-    # 检查图像目录是否存在
-    if not os.path.exists(IMAGES_DIR):
-        print(f"错误: 图像目录不存在 {IMAGES_DIR}")
+    # 扫描图像目录
+    image_files = scan_images_directory()
+    if not image_files:
+        print("没有找到图像文件，退出")
         return
-        
-    # 检查几个样本图像路径是否存在
-    sample_count = min(5, total_images)
+    
+    # 显示前几个图像文件的路径
+    sample_count = min(5, len(image_files))
     for i in range(sample_count):
-        image_path = os.path.join(IMAGES_DIR, images[i]['file_name'])
-        exists = os.path.exists(image_path)
-        print(f"样本图像 {i+1}: {image_path} - {'存在' if exists else '不存在'}")
+        image_path = os.path.join(IMAGES_DIR, image_files[i])
+        print(f"样本图像 {i+1}: {image_path} - {'存在' if os.path.exists(image_path) else '不存在'}")
     
     start_time = time.time()
     success_count = 0
     error_count = 0
     
     # 使用tqdm显示进度
-    for i in tqdm(range(0, total_images, BATCH_SIZE), desc="编码图像"):
-        batch_images = images[i:i+BATCH_SIZE]
+    for i in tqdm(range(0, len(image_files), BATCH_SIZE), desc="编码图像"):
+        batch_files = image_files[i:i+BATCH_SIZE]
         batch_tensors = []
-        batch_ids = []
-        skipped_images = 0
+        batch_file_names = []
         
         # 准备批次
-        for image_row in batch_images:
-            image_id = image_row['id']
-            file_name = image_row['file_name']
+        for file_name in batch_files:
             image_path = os.path.join(IMAGES_DIR, file_name)
             
             # 预处理图像
             tensor = encoder.preprocess_image(image_path)
             if tensor is not None:
                 batch_tensors.append(tensor)
-                batch_ids.append(image_id)
-            else:
-                skipped_images += 1
-        
-        if skipped_images > 0 and i < 50:  # 只显示前几批次的详细跳过信息
-            print(f"批次 {i//BATCH_SIZE + 1}: 跳过了 {skipped_images}/{len(batch_images)} 张图像")
+                batch_file_names.append(file_name)
         
         if not batch_tensors:
             continue
@@ -196,21 +210,46 @@ def encode_all_images():
         features = encoder.encode_image(batch)
         
         # 存储每个图像的特征
-        for j, image_id in enumerate(batch_ids):
+        for j, file_name in enumerate(batch_file_names):
             image_features = features[j:j+1]  # 保持批次维度
-            if db_manager.insert_features(table_name, image_id, image_features):
+            if db_manager.insert_features(table_name, file_name, image_features):
                 success_count += 1
             else:
                 error_count += 1
     
     elapsed_time = time.time() - start_time
-    print(f"编码完成: {success_count}/{total_images} 图像成功处理")
+    print(f"编码完成: {success_count}/{len(image_files)} 图像成功处理")
     print(f"编码失败: {error_count} 图像")
-    print(f"跳过的图像: {total_images - success_count - error_count} 张")
-    print(f"总用时: {elapsed_time:.2f} 秒, 平均每张图像 {elapsed_time/total_images:.4f} 秒")
+    print(f"总用时: {elapsed_time:.2f} 秒, 平均每张图像 {elapsed_time/len(image_files):.4f} 秒")
     
     # 关闭数据库连接
     db_manager.close()
+
+
+def retrieve_features(file_name):
+    """从数据库检索图像特征"""
+    db_manager = DatabaseManager()
+    table_name = "image_features_clip"
+    
+    try:
+        results = db_manager.fetchall(
+            f"SELECT features FROM {table_name} WHERE file_name = ?",
+            (file_name,)
+        )
+        
+        if results:
+            # 将二进制数据转换回NumPy数组
+            features_blob = results[0]['features']
+            
+            # 重建NumPy数组 (根据RN50x4的特征维度)
+            feature_dim = 640  # RN50x4的特征维度
+            features = np.frombuffer(features_blob, dtype=np.float32).reshape(1, feature_dim)
+            return features
+        else:
+            print(f"未找到图像 {file_name} 的特征")
+            return None
+    finally:
+        db_manager.close()
 
 
 if __name__ == "__main__":
@@ -219,10 +258,20 @@ if __name__ == "__main__":
     print(f"图像目录: {IMAGES_DIR}")
     print(f"CLIP模型类型: {CLIP_MODEL_TYPE}")
     
-    # 检查数据库是否存在
-    if not os.path.exists(DB_PATH):
-        print(f"错误: 数据库文件不存在 {DB_PATH}")
+    # 检查图像目录是否存在
+    if not os.path.exists(IMAGES_DIR):
+        print(f"错误: 图像目录不存在 {IMAGES_DIR}")
     else:
         encode_all_images()
+    
+    # 测试检索功能
+    image_files = scan_images_directory()
+    if image_files:
+        sample_file = image_files[0]
+        print(f"\n测试特征检索，使用文件: {sample_file}")
+        features = retrieve_features(sample_file)
+        if features is not None:
+            print(f"特征形状: {features.shape}")
+            print(f"特征样本 (前5个值): {features[0, :5]}")
     
     print("处理完成")
