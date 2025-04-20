@@ -175,3 +175,9 @@ python generate_titles.py --model-path models/transformer_title_generator.pt --i
 - COCO数据集提供的图像和描述数据
 - PyTorch团队的优秀深度学习框架
 - 开源社区的图像标题生成实现
+
+This repository implements the method described in the paper:
+
+**Text-Only Training for Image Captioning using Noise-Injected CLIP**  
+David Nukrai, Ron Mokady, Amir Globerson  
+arXiv: [2211.00575](https://arxiv.org/abs/2211.00575)
