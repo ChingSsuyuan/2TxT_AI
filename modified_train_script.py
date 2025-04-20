@@ -109,7 +109,7 @@ class DatabaseClipDataset(Dataset):
             self.file_names.append(file_name)
             
             # 将二进制BLOB转换为numpy数组，然后转换为torch.Tensor
-            features = np.frombuffer(features_blob, dtype=np.float32).reshape(1, -1)
+            features = np.frombuffer(features_blob, dtype=np.float32).reshape(1, -1).copy()  # 添加.copy()使数组可写
             self.prefixes.append(torch.from_numpy(features).to(device))
             
             # 假设用文件名作为标题（实际应用中可能需要修改）
@@ -303,7 +303,7 @@ class ClipCaptionModel(nn.Module):
                                      self.gpt_embedding_size * prefix_length))
         else:
             self.clip_project = TransformerMapper(prefix_size, self.gpt_embedding_size, prefix_length,
-                                                clip_length, num_layers)
+                                                                     clip_length, num_layers)
 
 
 class ClipCaptionPrefix(ClipCaptionModel):
@@ -320,7 +320,11 @@ class ClipCaptionPrefix(ClipCaptionModel):
 def save_config(args: argparse.Namespace):
     config = {}
     for key, item in args._get_kwargs():
-        config[key] = item
+        if isinstance(item, MappingType):
+            # 将 MappingType 转换为字符串
+            config[key] = item.value
+        else:
+            config[key] = item
     out_path = os.path.join(args.out_dir, f"{args.prefix}.json")
     with open(out_path, 'w') as outfile:
         json.dump(config, outfile)
@@ -447,7 +451,7 @@ def main():
     parser.add_argument('--save_every', type=int, default=1, help='save every n epochs')
     parser.add_argument('--prefix_length', type=int, default=40, help='prefix length')
     parser.add_argument('--prefix_length_clip', type=int, default=40, help='prefix length for clip')
-    parser.add_argument('--bs', type=int, default=16, help='batch size')
+    parser.add_argument('--bs', type=int, default=34, help='batch size')
     parser.add_argument('--only_prefix', dest='only_prefix', action='store_true', default=False, help='train only the mapper between CLIP and GPT, while GPT is frozen')
     parser.add_argument('--mapping_type', type=str, default='transformer', help='type of architecture between CLIP and GPT (mlp/transformer)')
     parser.add_argument('--num_layers', type=int, default=8, help='number of layers in the mapper')
@@ -460,6 +464,8 @@ def main():
     # 从数据库加载数据
     dataset = DatabaseClipDataset(args.db_path, args.table_name, args.prefix_length, normalize_prefix=not args.dont_norm)
     
+    # 存储原始映射类型字符串以便于JSON序列化
+    mapping_type_str = args.mapping_type
     # 设置映射类型
     args.mapping_type = {'mlp': MappingType.MLP, 'transformer': MappingType.Transformer}[args.mapping_type]
     
@@ -484,8 +490,12 @@ def main():
     
     # 保存训练参数
     with open(f'{args.out_dir}/train_commandline_args.txt', 'w') as f:
-        args_at_dict = args.__dict__
-        json.dump(dict(args_at_dict), f, indent=2)
+        args_at_dict = args.__dict__.copy()
+        # 处理 MappingType 枚举值，将其转换为字符串
+        if 'mapping_type' in args_at_dict:
+            if isinstance(args_at_dict['mapping_type'], MappingType):
+                args_at_dict['mapping_type'] = mapping_type_str  # 使用原始字符串
+        json.dump(args_at_dict, f, indent=2)
         print(f'args saved to file {args.out_dir}/train_commandline_args.txt')
     
     # 保存训练配置
