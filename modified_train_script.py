@@ -451,7 +451,7 @@ def main():
     parser.add_argument('--save_every', type=int, default=1, help='save every n epochs')
     parser.add_argument('--prefix_length', type=int, default=40, help='prefix length')
     parser.add_argument('--prefix_length_clip', type=int, default=40, help='prefix length for clip')
-    parser.add_argument('--bs', type=int, default=34, help='batch size')
+    parser.add_argument('--bs', type=int, default=32, help='batch size')
     parser.add_argument('--only_prefix', dest='only_prefix', action='store_true', default=False, help='train only the mapper between CLIP and GPT, while GPT is frozen')
     parser.add_argument('--mapping_type', type=str, default='transformer', help='type of architecture between CLIP and GPT (mlp/transformer)')
     parser.add_argument('--num_layers', type=int, default=8, help='number of layers in the mapper')

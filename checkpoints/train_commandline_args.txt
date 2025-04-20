@@ -15,7 +15,7 @@
   "save_every": 1,
   "prefix_length": 40,
   "prefix_length_clip": 40,
-  "bs": 34,
+  "bs": 32,
   "only_prefix": false,
   "mapping_type": "transformer",
   "num_layers": 8,

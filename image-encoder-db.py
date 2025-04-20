@@ -269,6 +269,7 @@ if __name__ == "__main__":
     if image_files:
         sample_file = image_files[0]
         print(f"\n测试特征检索，使用文件: {sample_file}")
+        
         features = retrieve_features(sample_file)
         if features is not None:
             print(f"特征形状: {features.shape}")
