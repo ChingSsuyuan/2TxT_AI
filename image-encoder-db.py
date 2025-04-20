@@ -1,109 +1,59 @@
 import torch
-import torch.nn as nn
-import torchvision.models as models
-import torchvision.transforms as transforms
-from PIL import Image
 import sqlite3
 import os
 import numpy as np
 import time
-import argparse
-from tqdm import tqdm  
+from PIL import Image
+import clip
+from tqdm import tqdm
 
-class ImageEncoder:
-    """图像编码器基类"""
-    def __init__(self, output_feature_dim):
-        self.output_feature_dim = output_feature_dim
-        self.transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225]
-            )
-        ])
-    
-    def encode(self, image_tensor):
-        """将图像张量编码为特征"""
-        raise NotImplementedError("子类必须实现此方法")
+# 固定路径配置
+DB_PATH = "coco_image_title_data/image_title_database.db"
+IMAGES_DIR = "coco_image_title_data/images"
+CLIP_MODEL_TYPE = "RN50x4"
+BATCH_SIZE = 16
+
+class CLIPEncoder:
+    """CLIP图像编码器"""
+    def __init__(self):
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        print(f"正在加载CLIP模型 {CLIP_MODEL_TYPE}...")
+        self.model, self.preprocess = clip.load(CLIP_MODEL_TYPE, device=self.device, jit=False)
+        
+        # 冻结参数
+        for param in self.model.parameters():
+            param.requires_grad = False
+            
+        print(f"CLIP模型加载完成，使用设备: {self.device}")
     
     def preprocess_image(self, image_path):
         """预处理图像文件为张量"""
         try:
             image = Image.open(image_path).convert('RGB')
-            image_tensor = self.transform(image)
-            # 添加批次维度
-            image_tensor = image_tensor.unsqueeze(0)
+            image_tensor = self.preprocess(image).unsqueeze(0).to(self.device)
             return image_tensor
-        except Exception as e:
-            print(f"处理图像时出错 {image_path}: {e}")
+        except:
             return None
-
-
-class ResNetEncoder(ImageEncoder):
-    """使用预训练ResNet编码图像"""
-    def __init__(self, output_feature_dim=2048, model_name='resnet50', return_feature_map=False):
-        super().__init__(output_feature_dim)
-        self.return_feature_map = return_feature_map
-        self.model_name = model_name
-        
-        # 加载预训练模型
-        if model_name == 'resnet18':
-            base_model = models.resnet18(pretrained=True)
-            self.output_feature_dim = 512
-        elif model_name == 'resnet34':
-            base_model = models.resnet34(pretrained=True)
-            self.output_feature_dim = 512
-        elif model_name == 'resnet50':
-            base_model = models.resnet50(pretrained=True)
-            self.output_feature_dim = 2048
-        elif model_name == 'resnet101':
-            base_model = models.resnet101(pretrained=True)
-            self.output_feature_dim = 2048
-        elif model_name == 'resnet152':
-            base_model = models.resnet152(pretrained=True)
-            self.output_feature_dim = 2048
-        else:
-            raise ValueError(f"不支持的ResNet类型: {model_name}")
-        
-        # 根据需要返回特征图或全局特征
-        if self.return_feature_map:
-            # 移除自适应池化和全连接层，保留特征图
-            self.model = nn.Sequential(*list(base_model.children())[:-2])
-        else:
-            # 移除最后的全连接层，保留全局特征
-            self.model = nn.Sequential(*list(base_model.children())[:-1])
-        
-        # 冻结参数
-        for param in self.model.parameters():
-            param.requires_grad = False
     
-    def encode(self, image_tensor):
+    def encode_image(self, image_tensor):
         """编码图像张量为特征"""
         if image_tensor is None:
             return None
             
-        self.model.eval()
-        
         with torch.no_grad():
-            features = self.model(image_tensor)
-            
-            if not self.return_feature_map:
-                # 调整形状为[批量大小, 特征维度]
-                features = features.reshape(features.size(0), -1)
-                
+            features = self.model.encode_image(image_tensor)
         return features
 
 
 class DatabaseManager:
     """管理数据库连接和操作"""
-    def __init__(self, db_path):
-        self.db_path = db_path
+    def __init__(self):
         self.conn = None
+        self.connect()
     
     def connect(self):
         """连接到SQLite数据库"""
-        self.conn = sqlite3.connect(self.db_path)
+        self.conn = sqlite3.connect(DB_PATH)
         self.conn.row_factory = sqlite3.Row
         return self.conn
     
@@ -115,9 +65,6 @@ class DatabaseManager:
     
     def execute(self, query, params=()):
         """执行SQL查询"""
-        if not self.conn:
-            self.connect()
-        
         cursor = self.conn.cursor()
         cursor.execute(query, params)
         self.conn.commit()
@@ -128,14 +75,13 @@ class DatabaseManager:
         cursor = self.execute(query, params)
         return cursor.fetchall()
     
-    def create_features_table(self, model_name, feature_dim):
+    def create_features_table(self):
         """创建存储图像特征的表"""
-        table_name = f"image_features_{model_name}"
+        table_name = f"image_features_clip"
         
         # 检查表是否已存在
         cursor = self.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
         if cursor.fetchone():
-            print(f"表 {table_name} 已存在，将被删除并重新创建")
             self.execute(f"DROP TABLE {table_name}")
         
         # 创建表
@@ -172,8 +118,7 @@ class DatabaseManager:
                 (image_id, features_blob)
             )
             return True
-        except Exception as e:
-            print(f"插入特征时出错 (image_id={image_id}): {e}")
+        except:
             return False
     
     def get_image_paths(self):
@@ -181,58 +126,34 @@ class DatabaseManager:
         return self.fetchall("SELECT id, file_name FROM images")
 
 
-def encode_all_images(db_path, images_dir, model_name='resnet50', batch_size=16, debug=False):
-    """
-    编码所有图像并将特征存储到数据库
-    
-    Args:
-        db_path: 数据库文件路径
-        images_dir: 图像目录路径
-        model_name: 使用的ResNet模型类型
-        batch_size: 批处理大小
-        debug: 是否启用调试输出
-    """
-    # 初始化数据库管理器
-    db_manager = DatabaseManager(db_path)
-    
-    # 初始化编码器
-    encoder = ResNetEncoder(model_name=model_name)
-    feature_dim = encoder.output_feature_dim
+def encode_all_images():
+    """使用CLIP编码所有图像并将特征存储到数据库"""
+    # 初始化数据库管理器和编码器
+    db_manager = DatabaseManager()
+    encoder = CLIPEncoder()
     
     # 创建特征表
-    table_name = db_manager.create_features_table(model_name, feature_dim)
+    table_name = db_manager.create_features_table()
     
     # 获取所有图像路径
     images = db_manager.get_image_paths()
     total_images = len(images)
     print(f"找到 {total_images} 张图像")
     
-    # 批处理编码和存储
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"使用设备: {device}")
-    
-    # 将模型移到设备
-    encoder.model = encoder.model.to(device)
-    
     start_time = time.time()
     success_count = 0
     
     # 使用tqdm显示进度
-    for i in tqdm(range(0, total_images, batch_size), desc=f"编码图像 ({model_name})"):
-        batch_images = images[i:i+batch_size]
+    for i in tqdm(range(0, total_images, BATCH_SIZE), desc="编码图像"):
+        batch_images = images[i:i+BATCH_SIZE]
         batch_tensors = []
         batch_ids = []
         
         # 准备批次
         for image_row in batch_images:
             image_id = image_row['id']
-            image_path = os.path.join(images_dir, image_row['file_name'])
+            image_path = os.path.join(IMAGES_DIR, image_row['file_name'])
             
-            # 检查文件是否存在
-            if not os.path.exists(image_path):
-                print(f"警告: 图像文件不存在 {image_path}")
-                continue
-                
             # 预处理图像
             tensor = encoder.preprocess_image(image_path)
             if tensor is not None:
@@ -243,19 +164,16 @@ def encode_all_images(db_path, images_dir, model_name='resnet50', batch_size=16,
             continue
             
         # 堆叠张量形成批次
-        batch = torch.cat(batch_tensors, dim=0).to(device)
+        batch = torch.cat(batch_tensors, dim=0)
         
         # 批量编码
-        features = encoder.encode(batch)
+        features = encoder.encode_image(batch)
         
         # 存储每个图像的特征
         for j, image_id in enumerate(batch_ids):
             image_features = features[j:j+1]  # 保持批次维度
             if db_manager.insert_features(table_name, image_id, image_features):
                 success_count += 1
-                
-            if debug and j == 0:  # 在调试模式下显示第一个特征的样本
-                print(f"特征样本 (image_id={image_id}, 前5个值): {image_features[0, :5].cpu().numpy()}")
     
     elapsed_time = time.time() - start_time
     print(f"编码完成: {success_count}/{total_images} 图像成功处理")
@@ -265,91 +183,10 @@ def encode_all_images(db_path, images_dir, model_name='resnet50', batch_size=16,
     db_manager.close()
 
 
-def retrieve_features(db_path, model_name, image_id):
-    """
-    从数据库检索图像特征
-    
-    Args:
-        db_path: 数据库文件路径
-        model_name: 模型名称
-        image_id: 图像ID
-    
-    Returns:
-        特征向量 (NumPy数组)
-    """
-    db_manager = DatabaseManager(db_path)
-    table_name = f"image_features_{model_name}"
-    
-    try:
-        results = db_manager.fetchall(
-            f"SELECT features FROM {table_name} WHERE image_id = ?",
-            (image_id,)
-        )
-        
-        if results:
-            # 将二进制数据转换回NumPy数组
-            features_blob = results[0]['features']
-            
-            # 确定ResNet型号以获取正确的特征维度
-            encoder = ResNetEncoder(model_name=model_name)
-            feature_dim = encoder.output_feature_dim
-            
-            # 重建NumPy数组
-            features = np.frombuffer(features_blob, dtype=np.float32).reshape(1, feature_dim)
-            return features
-        else:
-            print(f"未找到图像ID {image_id} 的特征")
-            return None
-    finally:
-        db_manager.close()
-
-
-def main():
-    # 解析命令行参数
-    parser = argparse.ArgumentParser(description='使用ResNet编码图像并存储特征')
-    parser.add_argument('--db-path', type=str, default="coco_image_title_data/image_title_database.db",
-                        help='数据库文件路径')
-    parser.add_argument('--images-dir', type=str, default="coco_image_title_data/images",
-                        help='图像目录路径')
-    parser.add_argument('--model', type=str, default='resnet50',
-                        choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'],
-                        help='使用的ResNet模型类型')
-    parser.add_argument('--batch-size', type=int, default=16,
-                        help='批处理大小')
-    parser.add_argument('--debug', action='store_true',
-                        help='启用调试输出')
-    parser.add_argument('--test-image-id', type=int,
-                        help='测试特定图像ID的特征检索')
-    
-    args = parser.parse_args()
-    
-    # 检查路径是否存在
-    if not os.path.exists(args.db_path):
-        print(f"错误: 数据库文件不存在 {args.db_path}")
-        return
-    
-    if not os.path.exists(args.images_dir):
-        print(f"错误: 图像目录不存在 {args.images_dir}")
-        return
-    
-    # 编码所有图像
-    encode_all_images(
-        args.db_path, 
-        args.images_dir, 
-        model_name=args.model, 
-        batch_size=args.batch_size,
-        debug=args.debug
-    )
-    
-    # 如果指定了测试图像ID，则测试特征检索
-    if args.test_image_id:
-        features = retrieve_features(args.db_path, args.model, args.test_image_id)
-        
-        if features is not None:
-            print(f"\n检索图像ID {args.test_image_id} 的特征:")
-            print(f"特征形状: {features.shape}")
-            print(f"特征样本 (前5个值): {features[0, :5]}")
-
-
 if __name__ == "__main__":
-    main()
+    print(f"开始处理图像编码...")
+    print(f"数据库路径: {DB_PATH}")
+    print(f"图像目录: {IMAGES_DIR}")
+    print(f"CLIP模型类型: {CLIP_MODEL_TYPE}")
+    encode_all_images()
+    print("处理完成")
