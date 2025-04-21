@@ -6,7 +6,7 @@ import time
 from PIL import Image
 import clip
 from tqdm import tqdm
-
+from dataset_split import *
 # 固定路径配置
 DB_PATH = "coco_image_title_data/image_title_database.db"
 IMAGES_DIR = "coco_image_title_data/images"
@@ -251,7 +251,6 @@ def retrieve_features(file_name):
     finally:
         db_manager.close()
 
-
 if __name__ == "__main__":
     print(f"开始处理图像编码...")
     print(f"数据库路径: {DB_PATH}")
@@ -262,9 +261,27 @@ if __name__ == "__main__":
     if not os.path.exists(IMAGES_DIR):
         print(f"错误: 图像目录不存在 {IMAGES_DIR}")
     else:
+        # 步骤1: 编码所有图像
         encode_all_images()
+        
+        # 步骤2: 划分数据集为训练集(90%)和验证集(10%)
+        from dataset_split import split_encoded_images, get_dataset_split_counts, validate_feature_structures
+        split_encoded_images()
+        
+        # 步骤3: 验证数据集划分
+        stats = get_dataset_split_counts()
+        if stats:
+            print("\n数据集划分结果:")
+            print(f"训练集: {stats['training']} 图像 ({stats['train_ratio']*100:.1f}%)")
+            print(f"验证集: {stats['validation']} 图像 ({stats['val_ratio']*100:.1f}%)")
+        
+        # 步骤4: 验证特征结构
+        if validate_feature_structures():
+            print("✓ 训练集和验证集的特征结构一致")
+        else:
+            print("✗ 训练集和验证集的特征结构不一致，请检查数据")
     
-    # 测试检索功能
+    # 测试特征检索
     image_files = scan_images_directory()
     if image_files:
         sample_file = image_files[0]
