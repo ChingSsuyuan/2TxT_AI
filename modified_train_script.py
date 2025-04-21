@@ -119,7 +119,7 @@ class DatabaseClipDataset(Dataset):
         print(f"Loaded {len(self.image_ids)} samples from database")
         
     def process_captions(self):
-        """处理标题文本，转换为token"""
+        """处理标题文本,转换为token"""
         print("Processing captions...")
         self.captions_tokens = []
         self.caption2embedding = []
