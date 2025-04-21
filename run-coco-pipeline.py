@@ -55,22 +55,19 @@ def run_script(script_path, description, args=None):
 
 def main():
     # 解析命令行参数
-    parser = argparse.ArgumentParser(description='COCO图像标题处理流水线')
+    parser = argparse.ArgumentParser(description='简化版COCO图像处理流水线')
     parser.add_argument('--num-images', type=int, default=20, 
-                        help='要下载的图片数量 (默认: 20)')
+                      help='要下载的图片数量 (默认: 20)')
     parser.add_argument('--force', action='store_true',
-                        help='强制重新下载图片，即使数据库已有数据')
+                      help='强制重新下载图片，即使数据库已有数据')
     parser.add_argument('--random-seed', type=int, default=None,
-                        help='随机种子，用于图片选择 (默认: 使用系统时间)')
+                      help='随机种子，用于图片选择 (默认: 使用系统时间)')
     parser.add_argument('--clean', action='store_true',
-                        help='在处理前清空现有数据库')
+                      help='在处理前清空现有数据库')
     parser.add_argument('--debug', action='store_true',
-                        help='启用调试输出')
-    parser.add_argument('--skip-encoding', action='store_true',
-                        help='跳过图像编码步骤')
-    parser.add_argument('--resnet-model', type=str, default='resnet50',
-                        choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'],
-                        help='使用的ResNet模型类型 (默认: resnet50)')
+                      help='启用调试输出')
+    parser.add_argument('--clip-model', type=str, default='RN50x4',
+                      help='使用的CLIP模型类型 (默认: RN50x4)')
     args = parser.parse_args()
     
     # 如果未指定随机种子，确保每次运行使用不同种子
@@ -96,10 +93,6 @@ def main():
     print(f"使用随机种子: {args.random_seed}")
     if args.debug:
         print("已启用调试模式")
-    if not args.skip_encoding:
-        print(f"将使用 {args.resnet_model} 进行图像编码")
-    else:
-        print("已跳过图像编码步骤")
     
     try:
         # 将输出重定向到日志文件
@@ -107,7 +100,7 @@ def main():
         sys.stdout = log_file
         sys.stderr = log_file
         
-        print("COCO图像标题处理流水线")
+        print("简化版COCO图像处理流水线")
         print(f"开始时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"下载图片数量: {args.num_images}")
         if args.force:
@@ -115,13 +108,12 @@ def main():
         print(f"随机种子: {args.random_seed}")
         if args.debug:
             print("调试模式: 启用")
-        if not args.skip_encoding:
-            print(f"使用 {args.resnet_model} 进行图像编码")
         print("="*80)
         
         # 如果需要清空数据库
         if args.clean:
             print("\n清空现有数据库...")
+            # 假设有清空数据库的脚本
             clean_success = run_script("clean-database.py", "清空数据库和图片", ["--auto-confirm"])
             if not clean_success:
                 print("警告: 清空数据库操作失败，但将继续执行流水线")
@@ -130,7 +122,7 @@ def main():
         # 定义要运行的脚本及其描述
         scripts = []
         
-        # COCO数据库创建和图片下载
+        # 1. COCO数据库创建和图片下载
         coco_db_args = ["--num-images", str(args.num_images), "--random-seed", str(args.random_seed)]
         if args.force:
             coco_db_args.append("--force")
@@ -138,16 +130,13 @@ def main():
             coco_db_args.append("--debug")
         
         scripts.append(("coco-database-creation.py", "第1步: 创建COCO数据库并下载图片", coco_db_args))
-        scripts.append(("vocabulary-builder.py", "第2步: 构建词汇表", None))
-        scripts.append(("vocab-to-database.py", "第3步: 将词汇表导入数据库", None))
-        scripts.append(("remove-stopwords.py", "第4步: 从词汇表中移除停用词", None))
         
-        # 添加图像编码步骤
-        if not args.skip_encoding:
-            image_encoder_args = ["--model", args.resnet_model]
-            if args.debug:
-                image_encoder_args.append("--debug")
-            scripts.append(("image-encoder-db.py", "第5步: 使用ResNet编码图像特征", image_encoder_args))
+        # 2. 数据集划分
+        scripts.append(("database_modify.py", "第2步: 划分数据集为训练/验证/测试集", None))
+        
+        # 3. 图像编码 - 使用现有的image-encoder-db.py文件
+        # 注意：这里没有传递CLIP模型参数，因为原始脚本中使用的是固定的CLIP_MODEL_TYPE
+        scripts.append(("image-encoder-db.py", "第3步: 使用CLIP编码图像特征", None))
         
         # 顺序运行所有脚本
         for i, (script, description, script_args) in enumerate(scripts):

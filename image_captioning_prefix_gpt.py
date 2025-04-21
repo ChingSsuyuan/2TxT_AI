@@ -4,14 +4,12 @@ import sqlite3
 import argparse
 import numpy as np
 from PIL import Image
-import torchvision.transforms as transforms
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 import clip
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 
 class PrefixGPTCaptionModel(nn.Module):
     def __init__(self, prefix_length=40, clip_dim=640, gpt_embedding_dim=768):
@@ -25,7 +23,6 @@ class PrefixGPTCaptionModel(nn.Module):
         self.mapping_network = nn.Sequential(
             nn.Linear(clip_dim, gpt_embedding_dim * prefix_length),
             nn.ReLU(),
-            nn.Linear(gpt_embedding_dim * prefix_length, gpt_embedding_dim * prefix_length)
         )
         
         # Initialize the GPT-2 model
@@ -71,48 +68,6 @@ class PrefixGPTCaptionModel(nn.Module):
         relevant_labels = caption_ids
         
         return relevant_logits, relevant_labels
-    
-    def generate_caption(self, clip_features, tokenizer, max_length=50):
-        """Generate caption from CLIP features"""
-        with torch.no_grad():
-            # Get prefix embeddings
-            prefix_embeddings = self.mapping_network(clip_features)
-            prefix_embeddings = prefix_embeddings.view(-1, self.prefix_length, self.gpt_embedding_dim)
-            
-            # Start with BOS token
-            input_ids = torch.tensor([[tokenizer.bos_token_id]], device=clip_features.device)
-            input_embeds = self.gpt.transformer.wte(input_ids)
-            
-            # Initialize with prefix embeddings
-            embeds = prefix_embeddings.clone()
-            
-            # Generate tokens one by one
-            for _ in range(max_length):
-                # Forward pass through GPT-2
-                outputs = self.gpt(inputs_embeds=embeds, labels=None)
-                logits = outputs.logits
-                
-                # Get the next token prediction (last position)
-                next_token_logits = logits[:, -1, :]
-                
-                # Sample next token
-                probs = torch.softmax(next_token_logits, dim=-1)
-                next_token = torch.multinomial(probs, num_samples=1)
-                
-                # If EOS token is generated, stop
-                if next_token.item() == tokenizer.eos_token_id:
-                    break
-                
-                # Add token embedding to the sequence
-                next_token_embed = self.gpt.transformer.wte(next_token)
-                embeds = torch.cat([embeds, next_token_embed], dim=1)
-                
-                # Also keep track of tokens for decoding
-                input_ids = torch.cat([input_ids, next_token], dim=1)
-            
-            # Decode the generated token IDs to text
-            caption = tokenizer.decode(input_ids[0], skip_special_tokens=True)
-            return caption
 
 class COCOImageCaptionDataset(Dataset):
     def __init__(self, db_path, image_folder, split="Training_Set", preprocess=None):
@@ -150,8 +105,41 @@ class COCOImageCaptionDataset(Dataset):
             'caption': caption
         }
 
+def create_validation_set(db_path):
+    """Create validation set from training set if it doesn't exist"""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Check if Validation_Set table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='Validation_Set'")
+    table_exists = cursor.fetchone()
+    
+    if not table_exists:
+        # Create Validation_Set table
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS Validation_Set (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_name TEXT NOT NULL,
+            caption TEXT NOT NULL
+        )
+        ''')
+        
+        # Insert data from Training_Set
+        cursor.execute('''
+        INSERT INTO Validation_Set (file_name, caption)
+        SELECT file_name, caption FROM Training_Set
+        ''')
+        
+        conn.commit()
+        print("Created Validation_Set from Training_Set")
+    
+    conn.close()
+
 def train_model(args):
     """Train the Prefix+GPT captioning model"""
+    # Create validation set if needed
+    create_validation_set(args.db_path)
+    
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
     
@@ -207,9 +195,6 @@ def train_model(args):
     
     # Training loop
     best_val_loss = float('inf')
-    best_model_path = None
-    train_losses = []
-    val_losses = []
     
     print("Starting training...")
     for epoch in range(args.epochs):
@@ -254,7 +239,6 @@ def train_model(args):
                 print(f"Batch {batch_idx+1}/{len(train_loader)}, Loss: {loss.item():.4f}")
         
         avg_train_loss = epoch_loss / len(train_loader)
-        train_losses.append(avg_train_loss)
         print(f"Epoch {epoch+1}, Train Loss: {avg_train_loss:.4f}")
         
         # Validation
@@ -282,13 +266,13 @@ def train_model(args):
                 val_loss += loss.item()
         
         avg_val_loss = val_loss / len(val_loader)
-        val_losses.append(avg_val_loss)
         print(f"Epoch {epoch+1}, Validation Loss: {avg_val_loss:.4f}")
         
         # Save model if it's the best so far
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
-            checkpoint_path = os.path.join(args.checkpoint_dir, f"coco_prefix-{epoch+1:03d}.pt")
+            os.makedirs(args.checkpoint_dir, exist_ok=True)
+            checkpoint_path = os.path.join(args.checkpoint_dir, f"Prefix_GPT-{epoch+1:03d}.pt")
             torch.save({
                 'epoch': epoch+1,
                 'model_state_dict': model.state_dict(),
@@ -300,129 +284,23 @@ def train_model(args):
                 'prefix_length': args.prefix_length
             }, checkpoint_path)
             print(f"Saved best model checkpoint to {checkpoint_path}")
-            best_model_path = checkpoint_path
     
     # Save final model
-    final_path = os.path.join(args.checkpoint_dir, "coco_prefix-trained-final.pt")
+    final_path = os.path.join(args.checkpoint_dir, "Prefix_GPT-trained-final.pt")
     torch.save({
         'epoch': args.epochs,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
-        'train_loss': train_losses[-1],
-        'val_loss': val_losses[-1],
+        'train_loss': avg_train_loss,
+        'val_loss': avg_val_loss,
         'clip_dim': 640,
         'gpt_embedding_dim': 768,
         'prefix_length': args.prefix_length
     }, final_path)
     print(f"Saved final model to {final_path}")
-    
-    # Plot training curve
-    plt.figure(figsize=(10, 5))
-    plt.plot(range(1, args.epochs+1), train_losses, label='Training Loss')
-    plt.plot(range(1, args.epochs+1), val_losses, label='Validation Loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title('Training and Validation Loss')
-    plt.legend()
-    plt.savefig(os.path.join(args.checkpoint_dir, 'training_curve.png'))
-    
-    return best_model_path, final_path
-
-def find_best_model(checkpoint_dir):
-    """Find the model with the lowest validation loss"""
-    best_loss = float('inf')
-    best_model_path = None
-    
-    # List all checkpoint files
-    for filename in os.listdir(checkpoint_dir):
-        if filename.startswith('coco_prefix-') and filename.endswith('.pt'):
-            filepath = os.path.join(checkpoint_dir, filename)
-            try:
-                checkpoint = torch.load(filepath, map_location='cpu')
-                val_loss = checkpoint.get('val_loss', float('inf'))
-                
-                if val_loss < best_loss:
-                    best_loss = val_loss
-                    best_model_path = filepath
-            except Exception as e:
-                print(f"Error loading {filepath}: {e}")
-    
-    if best_model_path:
-        print(f"Best model: {best_model_path} with validation loss: {best_loss:.4f}")
-    else:
-        print("No valid model checkpoints found")
-    
-    return best_model_path
-
-def evaluate_model(model_path, db_path, image_folder, num_examples=5):
-    """Evaluate the model by generating captions for sample images"""
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    
-    # Load CLIP model
-    clip_model, preprocess = clip.load('RN50x4', device=device)
-    clip_model.eval()
-    
-    # Load tokenizer
-    tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
-    
-    # Load the model checkpoint
-    checkpoint = torch.load(model_path, map_location=device)
-    prefix_length = checkpoint.get('prefix_length', 40)
-    
-    # Create model and load weights
-    model = PrefixGPTCaptionModel(
-        prefix_length=prefix_length,
-        clip_dim=640,
-        gpt_embedding_dim=768
-    )
-    model.load_state_dict(checkpoint['model_state_dict'])
-    model.to(device)
-    model.eval()
-    
-    # Connect to the database
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    
-    # Get some random test images
-    cursor.execute("SELECT id, file_name, caption FROM Test_Set ORDER BY RANDOM() LIMIT ?", (num_examples,))
-    examples = cursor.fetchall()
-    
-    results = []
-    
-    for img_id, file_name, gt_caption in examples:
-        # Load and preprocess image
-        image_path = os.path.join(image_folder, file_name)
-        image = Image.open(image_path).convert('RGB')
-        image_input = preprocess(image).unsqueeze(0).to(device)
-        
-        # Get CLIP features
-        with torch.no_grad():
-            clip_features = clip_model.encode_image(image_input)
-        
-        # Generate caption
-        generated_caption = model.generate_caption(clip_features, tokenizer)
-        
-        results.append({
-            'image_id': img_id,
-            'file_name': file_name,
-            'ground_truth': gt_caption,
-            'generated': generated_caption
-        })
-    
-    conn.close()
-    
-    # Display results
-    for i, result in enumerate(results):
-        print(f"Example {i+1}:")
-        print(f"Image: {result['file_name']}")
-        print(f"Ground Truth: {result['ground_truth']}")
-        print(f"Generated: {result['generated']}")
-        print("-" * 50)
-    
-    return results
 
 def main():
-    parser = argparse.ArgumentParser(description='Train and evaluate Prefix+GPT captioning model')
+    parser = argparse.ArgumentParser(description='Train Prefix+GPT captioning model')
     
     # Training arguments
     parser.add_argument('--db_path', type=str, default='coco_image_title_data/image_title_database.db',
@@ -445,42 +323,9 @@ def main():
                        help='Number of data loader workers')
     parser.add_argument('--log_interval', type=int, default=10,
                        help='Log interval for training')
-    parser.add_argument('--mode', type=str, default='train',
-                       choices=['train', 'find_best', 'evaluate'],
-                       help='Mode: train, find_best, or evaluate')
-    parser.add_argument('--model_path', type=str, default=None,
-                       help='Path to model checkpoint for evaluation')
-    parser.add_argument('--num_examples', type=int, default=5,
-                       help='Number of examples to evaluate')
     
     args = parser.parse_args()
-    
-    # Create checkpoint directory if it doesn't exist
-    os.makedirs(args.checkpoint_dir, exist_ok=True)
-    
-    if args.mode == 'train':
-        best_model_path, final_path = train_model(args)
-        print(f"Training complete. Best model: {best_model_path}, Final model: {final_path}")
-        
-        # Evaluate the best model
-        print("Evaluating best model...")
-        evaluate_model(best_model_path, args.db_path, args.image_folder, args.num_examples)
-        
-    elif args.mode == 'find_best':
-        best_model_path = find_best_model(args.checkpoint_dir)
-        if best_model_path:
-            print("Evaluating best model...")
-            evaluate_model(best_model_path, args.db_path, args.image_folder, args.num_examples)
-            
-    elif args.mode == 'evaluate':
-        if args.model_path is None:
-            args.model_path = find_best_model(args.checkpoint_dir)
-            
-        if args.model_path:
-            print(f"Evaluating model: {args.model_path}")
-            evaluate_model(args.model_path, args.db_path, args.image_folder, args.num_examples)
-        else:
-            print("No model path provided or found")
+    train_model(args)
 
 if __name__ == '__main__':
     main()
