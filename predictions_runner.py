@@ -33,7 +33,7 @@ def load_data_from_db(db_path, limit=None):
 
 # 图像标题生成
 def generate_captions(model_path, db_path, images_dir, output_path, 
-                     prefix_length=40, mapping_type='transformer', 
+                     prefix_length=40, mapping_type='transformer_decoder', 
                      is_rn=False, use_beam=True, batch_size=1, limit=None):
     """使用训练好的模型为图像生成标题"""
     # 1. 加载模型
@@ -125,12 +125,12 @@ def main():
     
     # 模型参数
     prefix_length = 40  # 根据训练时使用的值设置
-    mapping_type = "transformer"  # 'mlp' 或 'transformer'
+    mapping_type = "transformer_decoder"  # 'mlp' 或 'transformer'
     is_rn = True  # 是否使用 RN50x4
     use_beam = True  # 是否使用束搜索
     
     # 可选参数
-    limit = None  # 设置为具体数字以限制处理的图片数量，用于测试
+    limit = 4  # 设置为具体数字以限制处理的图片数量，用于测试
     
     # 生成标题
     generate_captions(
