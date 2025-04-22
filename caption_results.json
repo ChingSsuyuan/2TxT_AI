@@ -1,0 +1,64 @@
+{
+  "results": [
+    {
+      "id": 1,
+      "file_name": "000000075560.jpg",
+      "generated_caption": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "original_captions": [
+        "An empty road with buildings on each side.",
+        "Quiet street corner with construction crane in background.",
+        "A streetlight on a road in front of several large buildings.",
+        "Cross street intersection shot on a cloudy day.",
+        "A street corner has a fence in the foreground, with buildings and a crane in the background."
+      ]
+    },
+    {
+      "id": 2,
+      "file_name": "000000205572.jpg",
+      "generated_caption": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nA man with a",
+      "original_captions": [
+        "A white plate full of rice and a meat.",
+        "A plate of food consisting of rice, raisins, meatballs and more",
+        "a meal with meat and rice on a table",
+        "A meal of rice with fruits and a meat garnished with a roast pepper.",
+        "A plate of food on the top of a table."
+      ]
+    },
+    {
+      "id": 3,
+      "file_name": "000000478174.jpg",
+      "generated_caption": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "original_captions": [
+        "A child riding a skateboard through a ramp park.",
+        "A young man riding a skateboard across a ramp.",
+        "The child was just learning how to skate on their skateboard. ",
+        "A young boy on skateboard riding on a ramp.",
+        "A kid rides a skateboard on the concrete."
+      ]
+    },
+    {
+      "id": 4,
+      "file_name": "000000395766.jpg",
+      "generated_caption": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nA man",
+      "original_captions": [
+        "a kid and a couple of women around a table",
+        "Four people gathered around a table that has a cake sitting on it.",
+        "A group of ladies around a table with a cake and table cloth on it",
+        "People outside with a birthday cake and plates ",
+        "A group of people that appear to be family, setting a table."
+      ]
+    },
+    {
+      "id": 5,
+      "file_name": "000000384700.jpg",
+      "generated_caption": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "original_captions": [
+        "Several airplanes and other vehicles in an airplane parking lot.",
+        "a number of large planes on an air port run way",
+        "A row of parked jetliners sitting on top of a runway.",
+        "A trio of planes sit on the tarmac while the luggae cart pulls up.",
+        "several airplanes parked on a landing strip in the rain."
+      ]
+    }
+  ]
+}

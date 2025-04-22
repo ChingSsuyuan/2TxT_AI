@@ -15,17 +15,17 @@ CLIP_MODEL_TYPE = "RN50x4"
 BATCH_SIZE = 16
 
 class CLIPEncoder:
-    """CLIP图像编码器"""
+    """CLIP"""
     def __init__(self):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        print(f"正在加载CLIP模型 {CLIP_MODEL_TYPE}...")
+        print(f"CLIP Model {CLIP_MODEL_TYPE}...")
         self.model, self.preprocess = clip.load(CLIP_MODEL_TYPE, device=self.device, jit=False)
         
         # 冻结参数
         for param in self.model.parameters():
             param.requires_grad = False
             
-        print(f"CLIP模型加载完成，使用设备: {self.device}")
+        print(f"CLIP complete: {self.device}")
     
     def preprocess_image(self, image_path):
         """预处理图像文件为张量"""

@@ -56,7 +56,7 @@ def run_script(script_path, description, args=None):
 def main():
     # 解析命令行参数
     parser = argparse.ArgumentParser(description='简化版COCO图像处理流水线')
-    parser.add_argument('--num-images', type=int, default=50, 
+    parser.add_argument('--num-images', type=int, default=100, 
                       help='要下载的图片数量 (默认: 50)')
     parser.add_argument('--force', action='store_true',
                       help='强制重新下载图片，即使数据库已有数据')

@@ -11,3 +11,4 @@ checkpoints
 venv
 cv_checkpoints
 best_model.pt
+gpt2_checkpoints
