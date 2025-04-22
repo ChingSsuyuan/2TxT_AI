@@ -46,7 +46,7 @@ except ImportError:
 
 print("="*70)
 print("从COCO数据集获取图片ID和标题信息并存入数据库")
-print("并下载图片到本地")
+print("只下载新图片，跳过已有图片")
 print("="*70)
 
 # 创建目录结构
@@ -73,12 +73,12 @@ if not os.path.exists(annFile):
 
 # 初始化数据库
 db_path = os.path.join(base_dir, 'image_title_database.db')
-print(f"创建/连接数据库: {db_path}")
+print(f"连接数据库: {db_path}")
 
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
-# 创建表 - 简化版本
+# 创建表 - 如果不存在
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS images (
     id INTEGER PRIMARY KEY,
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS captions (
 )
 ''')
 
-# 添加新列
+# 添加local_path列（如果不存在）
 try:
     cursor.execute("ALTER TABLE images ADD COLUMN local_path TEXT")
     conn.commit()
@@ -116,7 +116,8 @@ conn.commit()
 # 添加索引以提高性能
 try:
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_images_coco_id ON images(coco_id)")
-    print("已添加coco_id索引")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_images_file_name ON images(file_name)")
+    print("已添加必要索引")
 except sqlite3.OperationalError as e:
     print(f"添加索引时出错: {e}")
 
@@ -135,9 +136,11 @@ except Exception as e:
 all_img_ids = coco.getImgIds()
 print(f"数据集中的图像总数: {len(all_img_ids)}")
 
-# 检查数据库中已有多少图片
-cursor.execute("SELECT coco_id FROM images")
-downloaded_ids = set(row[0] for row in cursor.fetchall())
+# 检查数据库中已有多少图片并获取所有已有的file_name
+cursor.execute("SELECT coco_id, file_name FROM images")
+db_results = cursor.fetchall()
+downloaded_ids = set(row[0] for row in db_results)
+existing_filenames = set(row[1] for row in db_results)
 print(f"数据库中已有 {len(downloaded_ids)} 张图片")
 
 # 从所有ID中排除已下载的ID
@@ -153,12 +156,11 @@ if not available_ids:
     else:
         sys.exit(0)
 
-# 设置随机种子，保证不同运行之间选择不同图片
+# 设置随机种子
 if cmd_args.random_seed is not None:
     random.seed(cmd_args.random_seed)
     print(f"使用指定的随机种子: {cmd_args.random_seed}")
 else:
-    # 使用当前时间戳作为种子，确保每次运行使用不同的种子
     seed = int(time.time())
     random.seed(seed)
     print(f"使用当前时间戳作为随机种子: {seed}")
@@ -178,8 +180,13 @@ selected_imgs = coco.loadImgs(selected_img_ids)
 # 下载图像的函数
 def download_image(url, save_path):
     try:
+        # 首先检查文件是否已经存在
+        if os.path.exists(save_path):
+            print(f"图像文件已存在: {save_path}")
+            return True
+        
         response = requests.get(url, stream=True, timeout=30)
-        response.raise_for_status()  # 如果请求不成功则抛出异常
+        response.raise_for_status()
         
         with open(save_path, 'wb') as file:
             for chunk in response.iter_content(chunk_size=8192):
@@ -200,27 +207,32 @@ for i, img_info in enumerate(tqdm(selected_imgs, desc="处理图像")):
     width = img_info.get('width', 0)
     height = img_info.get('height', 0)
     
-    print(f"\n处理图像 {i+1}/{n}, ID: {img_id}")
+    print(f"\n处理图像 {i+1}/{n}, ID: {img_id}, 文件名: {file_name}")
     
-    # 再次检查该图片ID是否已存在（以防在此过程中有其他进程添加）
-    cursor.execute("SELECT id FROM images WHERE coco_id = ?", (img_id,))
+    # 检查该图片ID或文件名是否已存在
+    cursor.execute("SELECT id FROM images WHERE coco_id = ? OR file_name = ?", (img_id, file_name))
     existing = cursor.fetchone()
     
     if existing and not cmd_args.force:
-        print(f"图像ID {img_id} 已在数据库中，跳过")
+        print(f"图像ID {img_id} 或文件名 {file_name} 已在数据库中，跳过")
         continue
     
     # 构建图像URL和保存路径
-    # COCO 2017数据集图像URL格式
     img_url = f"http://images.cocodataset.org/train2017/{file_name}"
     local_path = os.path.join(images_dir, file_name)
     
-    # 下载图像
-    print(f"下载图像: {img_url}")
-    download_success = download_image(img_url, local_path)
+    # 检查物理文件是否已存在
+    file_exists = os.path.exists(local_path)
+    if file_exists and not cmd_args.force:
+        print(f"图像文件已存在: {local_path}")
+        download_success = True
+    else:
+        # 下载图像
+        print(f"下载图像: {img_url}")
+        download_success = download_image(img_url, local_path)
     
     if download_success:
-        print(f"图像已下载并保存到: {local_path}")
+        print(f"图像已保存到: {local_path}")
     else:
         print(f"无法下载图像，仅保存元数据")
         local_path = None
@@ -271,8 +283,8 @@ for i, img_info in enumerate(tqdm(selected_imgs, desc="处理图像")):
     except sqlite3.IntegrityError as e:
         print(f"插入数据时出错 (可能是重复键): {e}")
         conn.rollback()
-        # 如果下载了图片但插入失败，删除图片文件
-        if download_success and os.path.exists(local_path):
+        # 如果下载了图片但插入失败，且原来不存在该图片，则删除图片文件
+        if download_success and os.path.exists(local_path) and not file_exists:
             try:
                 os.remove(local_path)
                 print(f"由于数据库插入失败，已删除图片文件: {local_path}")
@@ -281,6 +293,19 @@ for i, img_info in enumerate(tqdm(selected_imgs, desc="处理图像")):
     except Exception as e:
         print(f"处理图像时出错: {e}")
         conn.rollback()
+
+# 验证数据库中的现有图片
+print("\n检查数据库中的图片文件状态...")
+cursor.execute("SELECT id, file_name, local_path FROM images")
+all_images = cursor.fetchall()
+
+missing_files = 0
+for img_id, file_name, local_path in tqdm(all_images, desc="验证图片文件"):
+    if local_path and not os.path.exists(local_path):
+        missing_files += 1
+        print(f"警告: 图像ID {img_id}, 文件 {file_name} 的本地文件不存在: {local_path}")
+
+print(f"\n检测到 {missing_files} 个图片文件缺失")
 
 # 验证数据库内容
 print("\n验证数据库内容:")
@@ -294,7 +319,7 @@ print(f"数据库中的图像总数量: {image_count}")
 # 查询成功下载的图像数量
 cursor.execute("SELECT COUNT(*) FROM images WHERE local_path IS NOT NULL")
 downloaded_count = cursor.fetchone()[0]
-print(f"成功下载的图像数量: {downloaded_count}")
+print(f"有本地路径记录的图像数量: {downloaded_count}")
 
 # 查询标题数量
 cursor.execute("SELECT COUNT(*) FROM captions")
