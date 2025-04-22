@@ -436,9 +436,9 @@ def train(dataset: DatabaseClipDataset, model: ClipCaptionModel, args, warmup_st
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--db_path', default='coco_image_title_data/image_title_database.db', help='path to SQLite database with CLIP embeddings')
-    parser.add_argument('--table_name', default='image_features_clip', help='table name in database containing CLIP embeddings')
+    parser.add_argument('--table_name', default='image_features_clip_train', help='table name in database containing CLIP embeddings')
     parser.add_argument('--val_db_path', default='coco_image_title_data/image_title_database.db', help='path to validation database (optional)')
-    parser.add_argument('--val_table_name', default='image_features_clip_V', help='validation table name (optional)')
+    parser.add_argument('--val_table_name', default='image_features_clip_val', help='validation table name (optional)')
     parser.add_argument('--pretrain_weights', default='', help='path to pretrained weights, if not specified, will train from scratch')
     parser.add_argument('--out_dir', default='./checkpoints', help='path to output directory')
     parser.add_argument('--add_modality_offset', dest='add_modality_offset', action='store_true', default=False, help='train with modality offset that was pre calculated at others/CLIP_embeddings_centers_info.pkl')

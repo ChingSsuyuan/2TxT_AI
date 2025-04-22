@@ -23,21 +23,21 @@ def parse_args():
     # Database paths
     parser.add_argument('--db_path', default='coco_image_title_data/image_title_database.db', 
                         help='path to SQLite database with CLIP embeddings')
-    parser.add_argument('--table_name', default='image_features_clip', 
+    parser.add_argument('--table_name', default='image_features_clip_train', 
                         help='table name in database containing CLIP embeddings')
     parser.add_argument('--val_db_path', default='coco_image_title_data/image_title_database.db', 
                         help='path to validation database')
-    parser.add_argument('--val_table_name', default='image_features_clip_V', 
+    parser.add_argument('--val_table_name', default='image_features_clip_val', 
                         help='validation table name')
     
     # Hyperparameter search space
-    parser.add_argument('--epochs_list', nargs='+', type=int, default=[10,15,25,30], 
+    parser.add_argument('--epochs_list', nargs='+', type=int, default=[10, 25], 
                         help='list of epoch values to try')
-    parser.add_argument('--num_layers_list', nargs='+', type=int, default=[4,8,12], 
+    parser.add_argument('--num_layers_list', nargs='+', type=int, default=[ 8, 12], 
                         help='list of layer numbers to try')
-    parser.add_argument('--lr_list', nargs='+', type=float, default=[1e-6,1e-5,5e-5,5e-4,5e-3], 
+    parser.add_argument('--lr_list', nargs='+', type=float, default=[5e-5, 5e-4, 5e-3], 
                         help='list of learning rates to try')
-    parser.add_argument('--bs_list', nargs='+', type=int, default=[5,15,30,60], 
+    parser.add_argument('--bs_list', nargs='+', type=int, default=[5,10], 
                         help='list of batch sizes to try')
     
     # Other model parameters (fixed)
@@ -205,9 +205,21 @@ def main():
             print(f"Starting training with {len(train_dataset)} samples")
             train(train_dataset, model, run_args, output_dir=run_dir, output_prefix=run_prefix)
             
-            # Load the trained model for evaluation
-            model_path = os.path.join(run_dir, f"{run_prefix}_latest.pt")
-            model.load_state_dict(torch.load(model_path, map_location=device))
+            # Load the trained model for evaluation - look for epoch-numbered models
+            # First try to find the latest epoch model file
+            epoch_model_path = os.path.join(run_dir, f"{run_prefix}-{epochs-1:03d}.pt")
+            if not os.path.exists(epoch_model_path):
+                # If not found, try finding any model files in the directory
+                model_files = [f for f in os.listdir(run_dir) if f.endswith('.pt')]
+                if not model_files:
+                    raise FileNotFoundError(f"No model files found in {run_dir}")
+                
+                # Sort model files to get the latest one
+                model_files.sort()
+                epoch_model_path = os.path.join(run_dir, model_files[-1])
+                print(f"Using model file: {epoch_model_path}")
+            
+            model.load_state_dict(torch.load(epoch_model_path, map_location=device))
             model = model.to(device)
             
             # Evaluate on validation set
@@ -221,7 +233,7 @@ def main():
                 'learning_rate': lr,
                 'batch_size': bs,
                 'validation_loss': val_loss,
-                'model_path': model_path
+                'model_path': epoch_model_path  # Use the actual model path we found
             }
             results.append(result)
             
@@ -229,7 +241,7 @@ def main():
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 best_params = result
-                best_model_path = model_path
+                best_model_path = epoch_model_path  # Use the actual model path we found
                 
             # Save results after each run
             with open(os.path.join(args.out_dir, 'cv_results.json'), 'w') as f:

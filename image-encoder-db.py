@@ -6,7 +6,8 @@ import time
 from PIL import Image
 import clip
 from tqdm import tqdm
-from dataset_split import *
+import random
+
 # 固定路径配置
 DB_PATH = "coco_image_title_data/image_title_database.db"
 IMAGES_DIR = "coco_image_title_data/images"
@@ -76,16 +77,14 @@ class DatabaseManager:
         cursor = self.execute(query, params)
         return cursor.fetchall()
     
-    def create_features_table(self):
+    def create_features_table(self, table_name="image_features_clip"):
         """创建存储图像特征的表"""
-        table_name = f"image_features_clip"
-        
         # 检查表是否已存在
         cursor = self.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
         if cursor.fetchone():
             self.execute(f"DROP TABLE {table_name}")
         
-        # 创建表 - 由于我们现在是从目录扫描图像，表结构略有不同
+        # 创建表
         self.execute(f"""
         CREATE TABLE {table_name} (
             id INTEGER PRIMARY KEY,
@@ -121,19 +120,6 @@ class DatabaseManager:
         except Exception as e:
             print(f"插入特征时出错 (file_name={file_name}): {str(e)}")
             return False
-            
-    def get_image_id_by_filename(self, file_name):
-        """通过文件名获取图像ID（如果在images表中存在）"""
-        try:
-            results = self.fetchall(
-                "SELECT id FROM images WHERE file_name = ?",
-                (file_name,)
-            )
-            if results:
-                return results[0]['id']
-            return None
-        except:
-            return None
 
 
 def scan_images_directory():
@@ -166,13 +152,13 @@ def encode_all_images():
     encoder = CLIPEncoder()
     
     # 创建特征表
-    table_name = db_manager.create_features_table()
+    main_table = db_manager.create_features_table("image_features_clip")
     
     # 扫描图像目录
     image_files = scan_images_directory()
     if not image_files:
         print("没有找到图像文件，退出")
-        return
+        return []
     
     # 显示前几个图像文件的路径
     sample_count = min(5, len(image_files))
@@ -183,6 +169,7 @@ def encode_all_images():
     start_time = time.time()
     success_count = 0
     error_count = 0
+    processed_files = []
     
     # 使用tqdm显示进度
     for i in tqdm(range(0, len(image_files), BATCH_SIZE), desc="编码图像"):
@@ -212,8 +199,9 @@ def encode_all_images():
         # 存储每个图像的特征
         for j, file_name in enumerate(batch_file_names):
             image_features = features[j:j+1]  # 保持批次维度
-            if db_manager.insert_features(table_name, file_name, image_features):
+            if db_manager.insert_features(main_table, file_name, image_features):
                 success_count += 1
+                processed_files.append(file_name)
             else:
                 error_count += 1
     
@@ -224,12 +212,13 @@ def encode_all_images():
     
     # 关闭数据库连接
     db_manager.close()
+    
+    return processed_files
 
 
-def retrieve_features(file_name):
+def retrieve_features(file_name, table_name="image_features_clip"):
     """从数据库检索图像特征"""
     db_manager = DatabaseManager()
-    table_name = "image_features_clip"
     
     try:
         results = db_manager.fetchall(
@@ -251,6 +240,13 @@ def retrieve_features(file_name):
     finally:
         db_manager.close()
 
+
+def split_dataset(processed_files):
+    """将数据集分为训练集(85%)、验证集(10%)和测试集(5%)"""
+    from dataset_split import split_encoded_images
+    return split_encoded_images(processed_files, train_ratio=0.85, val_ratio=0.10, test_ratio=0.05)
+
+
 if __name__ == "__main__":
     print(f"开始处理图像编码...")
     print(f"数据库路径: {DB_PATH}")
@@ -262,24 +258,26 @@ if __name__ == "__main__":
         print(f"错误: 图像目录不存在 {IMAGES_DIR}")
     else:
         # 步骤1: 编码所有图像
-        encode_all_images()
+        processed_files = encode_all_images()
         
-        # 步骤2: 划分数据集为训练集(90%)和验证集(10%)
-        from dataset_split import split_encoded_images, get_dataset_split_counts, validate_feature_structures
-        split_encoded_images()
-        
-        # 步骤3: 验证数据集划分
-        stats = get_dataset_split_counts()
-        if stats:
-            print("\n数据集划分结果:")
-            print(f"训练集: {stats['training']} 图像 ({stats['train_ratio']*100:.1f}%)")
-            print(f"验证集: {stats['validation']} 图像 ({stats['val_ratio']*100:.1f}%)")
-        
-        # 步骤4: 验证特征结构
-        if validate_feature_structures():
-            print("✓ 训练集和验证集的特征结构一致")
-        else:
-            print("✗ 训练集和验证集的特征结构不一致，请检查数据")
+        # 步骤2: 划分数据集为训练集(85%)、验证集(10%)和测试集(5%)
+        if processed_files:
+            from dataset_split import split_encoded_images, get_dataset_split_counts, validate_feature_structures
+            
+            # 执行数据集划分
+            split_stats = split_encoded_images(processed_files, train_ratio=0.85, val_ratio=0.10, test_ratio=0.05)
+            
+            if split_stats:
+                print("\n数据集划分结果:")
+                print(f"训练集: {split_stats['train']} 图像 ({split_stats['train_ratio']*100:.1f}%)")
+                print(f"验证集: {split_stats['val']} 图像 ({split_stats['val_ratio']*100:.1f}%)")
+                print(f"测试集: {split_stats['test']} 图像 ({split_stats['test_ratio']*100:.1f}%)")
+            
+            # 验证特征结构
+            if validate_feature_structures():
+                print("✓ 训练集、验证集和测试集的特征结构一致")
+            else:
+                print("✗ 特征结构不一致，请检查数据")
     
     # 测试特征检索
     image_files = scan_images_directory()

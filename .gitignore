@@ -9,3 +9,5 @@ uploaded_images
 coco_image_title_data
 checkpoints
 venv
+cv_checkpoints
+best_model.pt

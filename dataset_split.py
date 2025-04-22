@@ -1,193 +1,247 @@
 import sqlite3
+import os
 import numpy as np
+import random
 from tqdm import tqdm
 
-# 使用原有的常量配置
+# 固定路径配置
 DB_PATH = "coco_image_title_data/image_title_database.db"
 
-def create_features_tables():
-    """
-    根据Training_Set, Validation_Set和Test_Set表创建三个特征表
-    image_features_clip, image_features_clip_V和image_features_clip_T
-    """
-    print(f"开始准备特征表...")
+class DatabaseManager:
+    """管理数据库连接和操作"""
+    def __init__(self):
+        self.conn = None
+        self.connect()
     
-    # 连接到数据库
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    def connect(self):
+        """连接到SQLite数据库"""
+        self.conn = sqlite3.connect(DB_PATH)
+        self.conn.row_factory = sqlite3.Row
+        return self.conn
+    
+    def close(self):
+        """关闭数据库连接"""
+        if self.conn:
+            self.conn.close()
+            self.conn = None
+    
+    def execute(self, query, params=()):
+        """执行SQL查询"""
+        cursor = self.conn.cursor()
+        cursor.execute(query, params)
+        self.conn.commit()
+        return cursor
+    
+    def fetchall(self, query, params=()):
+        """执行查询并获取所有结果"""
+        cursor = self.execute(query, params)
+        return cursor.fetchall()
+    
+    def create_table(self, table_name):
+        """创建表"""
+        # 检查表是否已存在
+        cursor = self.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+        if cursor.fetchone():
+            self.execute(f"DROP TABLE {table_name}")
+            
+        self.execute(f"""
+        CREATE TABLE {table_name} (
+            id INTEGER PRIMARY KEY,
+            file_name TEXT NOT NULL,
+            features BLOB NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+        
+        # 创建索引
+        self.execute(f"CREATE INDEX idx_{table_name}_file_name ON {table_name}(file_name)")
+        
+        print(f"已创建表 {table_name}")
+
+
+def split_encoded_images(processed_files=None, train_ratio=0.85, val_ratio=0.10, test_ratio=0.05):
+    """将编码后的图像随机划分为训练集、验证集和测试集"""
+    db_manager = DatabaseManager()
+    
+    # 步骤1: 创建训练集、验证集和测试集的表
+    db_manager.create_table("image_features_clip_train")
+    db_manager.create_table("image_features_clip_val")
+    db_manager.create_table("image_features_clip_test")
     
     try:
-        # 检查源表是否存在
-        source_tables = ["Training_Set", "Validation_Set", "Test_Set"]
-        for source in source_tables:
-            cursor = conn.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{source}'")
-            if not cursor.fetchone():
-                print(f"错误: 源表 {source} 不存在")
-                return
+        # 如果没有提供处理过的文件列表，则从主表中获取所有文件名
+        if not processed_files:
+            results = db_manager.fetchall("SELECT file_name FROM image_features_clip")
+            processed_files = [row['file_name'] for row in results]
         
-        # 定义源表和目标表的映射
-        dataset_mapping = {
-            "Training_Set": "image_features_clip",
-            "Validation_Set": "image_features_clip_V",
-            "Test_Set": "image_features_clip_T"
+        if not processed_files:
+            print("没有找到已处理的图像文件")
+            return None
+            
+        # 随机打乱文件顺序
+        random.shuffle(processed_files)
+        
+        # 计算分割点
+        total_files = len(processed_files)
+        train_end = int(total_files * train_ratio)
+        val_end = train_end + int(total_files * val_ratio)
+        
+        # 划分数据集
+        train_files = processed_files[:train_end]
+        val_files = processed_files[train_end:val_end]
+        test_files = processed_files[val_end:]
+        
+        print(f"将 {total_files} 个图像划分为:")
+        print(f"- 训练集: {len(train_files)} 个图像 ({len(train_files)/total_files*100:.1f}%)")
+        print(f"- 验证集: {len(val_files)} 个图像 ({len(val_files)/total_files*100:.1f}%)")
+        print(f"- 测试集: {len(test_files)} 个图像 ({len(test_files)/total_files*100:.1f}%)")
+        
+        # 处理训练集
+        process_split(db_manager, "image_features_clip", "image_features_clip_train", train_files, "训练集")
+        
+        # 处理验证集
+        process_split(db_manager, "image_features_clip", "image_features_clip_val", val_files, "验证集")
+        
+        # 处理测试集
+        process_split(db_manager, "image_features_clip", "image_features_clip_test", test_files, "测试集")
+        
+        # 返回划分结果统计
+        return {
+            'train': len(train_files),
+            'val': len(val_files),
+            'test': len(test_files),
+            'total': total_files,
+            'train_ratio': len(train_files)/total_files,
+            'val_ratio': len(val_files)/total_files,
+            'test_ratio': len(test_files)/total_files
         }
         
-        # 为每个数据集创建特征表
-        for source_table, target_table in dataset_mapping.items():
-            # 检查目标表是否已存在，如果存在则删除
-            cursor = conn.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{target_table}'")
-            if cursor.fetchone():
-                conn.execute(f"DROP TABLE {target_table}")
-            
-            # 创建新的特征表
-            conn.execute(f"""
-            CREATE TABLE {target_table} (
-                id INTEGER PRIMARY KEY,
-                file_name TEXT NOT NULL,
-                features BLOB NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-            """)
-            
-            # 创建索引
-            conn.execute(f"CREATE INDEX idx_{target_table}_file_name ON {target_table}(file_name)")
-            
-            # 获取源表中的图像文件名数量
-            cursor = conn.execute(f"SELECT COUNT(*) as count FROM {source_table}")
-            count = cursor.fetchone()['count']
-            
-            print(f"为 {source_table} 创建了特征表 {target_table}，准备编码 {count} 个图像")
-            
-        print("\n特征表创建完成，可以开始编码过程")
-        
-        # 显示每个源表的前几个示例
-        for source_table in source_tables:
-            print(f"\n{source_table} 表中的前5个图像文件:")
-            cursor = conn.execute(f"SELECT file_name FROM {source_table} LIMIT 5")
-            for idx, row in enumerate(cursor.fetchall()):
-                print(f"{idx+1}. {row['file_name']}")
-            
     except Exception as e:
-        print(f"准备特征表时出错: {str(e)}")
+        print(f"划分数据集时出错: {str(e)}")
+        return None
     finally:
-        # 关闭数据库连接
-        conn.close()
+        db_manager.close()
+
+
+def process_split(db_manager, source_table, target_table, file_names, split_name):
+    """处理数据集划分，将特征从源表复制到目标表"""
+    print(f"正在处理{split_name}...")
+    
+    # 批处理大小
+    batch_size = 100
+    success_count = 0
+    
+    for i in tqdm(range(0, len(file_names), batch_size), desc=f"处理{split_name}"):
+        batch_files = file_names[i:i+batch_size]
+        
+        for file_name in batch_files:
+            # 从源表中获取特征
+            results = db_manager.fetchall(
+                f"SELECT features FROM {source_table} WHERE file_name = ?",
+                (file_name,)
+            )
+            
+            if results:
+                # 将特征插入目标表
+                db_manager.execute(
+                    f"INSERT INTO {target_table} (file_name, features) VALUES (?, ?)",
+                    (file_name, results[0]['features'])
+                )
+                success_count += 1
+    
+    print(f"{split_name}处理完成: {success_count}/{len(file_names)} 个文件成功处理")
+
 
 def get_dataset_split_counts():
-    """获取各数据集的图像计数"""
-    conn = sqlite3.connect(DB_PATH)
-    counts = {}
+    """获取数据集划分的统计信息"""
+    db_manager = DatabaseManager()
     
     try:
-        # 检查各个特征表的记录数
-        feature_tables = ["image_features_clip", "image_features_clip_V", "image_features_clip_T"]
-        total = 0
+        # 检查表是否存在
+        tables = ["image_features_clip_train", "image_features_clip_val", "image_features_clip_test"]
+        for table in tables:
+            cursor = db_manager.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
+            if not cursor.fetchone():
+                print(f"错误: 表 {table} 不存在")
+                return None
         
-        for table in feature_tables:
-            try:
-                cursor = conn.execute(f"SELECT COUNT(*) as count FROM {table}")
-                count = cursor.fetchone()[0]
-                counts[table] = count
-                total += count
-            except:
-                counts[table] = 0
+        # 获取各个表的记录数
+        train_count = db_manager.fetchall("SELECT COUNT(*) as count FROM image_features_clip_train")[0]['count']
+        val_count = db_manager.fetchall("SELECT COUNT(*) as count FROM image_features_clip_val")[0]['count']
+        test_count = db_manager.fetchall("SELECT COUNT(*) as count FROM image_features_clip_test")[0]['count']
+        
+        total_count = train_count + val_count + test_count
         
         # 计算比例
-        if total > 0:
-            counts["training"] = counts.get("image_features_clip", 0)
-            counts["validation"] = counts.get("image_features_clip_V", 0)
-            counts["test"] = counts.get("image_features_clip_T", 0)
-            counts["total"] = total
-            counts["train_ratio"] = counts["training"] / total if total > 0 else 0
-            counts["val_ratio"] = counts["validation"] / total if total > 0 else 0
-            counts["test_ratio"] = counts["test"] / total if total > 0 else 0
+        train_ratio = train_count / total_count if total_count > 0 else 0
+        val_ratio = val_count / total_count if total_count > 0 else 0
+        test_ratio = test_count / total_count if total_count > 0 else 0
         
-        return counts
+        return {
+            'training': train_count,
+            'validation': val_count,
+            'testing': test_count,
+            'total': total_count,
+            'train_ratio': train_ratio,
+            'val_ratio': val_ratio,
+            'test_ratio': test_ratio
+        }
+    except Exception as e:
+        print(f"获取数据集划分统计信息时出错: {str(e)}")
+        return None
     finally:
-        conn.close()
+        db_manager.close()
+
 
 def validate_feature_structures():
-    """验证不同特征表中的特征结构是一致的"""
-    conn = sqlite3.connect(DB_PATH)
-    tables = ["image_features_clip", "image_features_clip_V", "image_features_clip_T"]
-    feature_shapes = {}
+    """验证训练集、验证集和测试集的特征结构是否一致"""
+    db_manager = DatabaseManager()
     
     try:
-        for table in tables:
-            try:
-                # 检查表是否存在且有数据
-                cursor = conn.execute(f"SELECT COUNT(*) as count FROM {table}")
-                if cursor.fetchone()[0] == 0:
-                    print(f"表 {table} 中没有记录，无法验证结构")
-                    feature_shapes[table] = None
-                    continue
-                
-                # 从表获取一条记录
-                cursor = conn.execute(f"SELECT features FROM {table} LIMIT 1")
-                features_blob = cursor.fetchone()[0]
-                
-                # 将二进制数据转换回NumPy数组
-                feature_dim = 640  # RN50x4的特征维度
-                features = np.frombuffer(features_blob, dtype=np.float32).reshape(1, feature_dim)
-                feature_shapes[table] = features.shape
-            except Exception as e:
-                print(f"验证表 {table} 结构时出错: {str(e)}")
-                feature_shapes[table] = None
-    
-        print("\n特征结构验证:")
-        for table, shape in feature_shapes.items():
-            if shape is not None:
-                print(f"- {table}: 特征形状 {shape}")
-            else:
-                print(f"- {table}: 无法验证")
+        # 从各个集合中各获取一个样本
+        train_sample = db_manager.fetchall("SELECT features FROM image_features_clip_train LIMIT 1")
+        val_sample = db_manager.fetchall("SELECT features FROM image_features_clip_val LIMIT 1")
+        test_sample = db_manager.fetchall("SELECT features FROM image_features_clip_test LIMIT 1")
         
-        # 检查所有形状是否一致
-        shapes = [shape for shape in feature_shapes.values() if shape is not None]
-        if len(shapes) >= 2:
-            if all(shape == shapes[0] for shape in shapes):
-                print("✓ 所有数据集的特征结构一致")
-                return True
-            else:
-                print("✗ 不同数据集的特征结构不一致，请检查数据")
-                return False
-        else:
-            print("无法验证特征结构一致性，至少需要两个有效的数据集")
+        if not train_sample or not val_sample or not test_sample:
+            print("错误: 无法获取样本特征")
             return False
-            
+        
+        # 转换为NumPy数组
+        feature_dim = 640  # RN50x4的特征维度
+        
+        train_features = np.frombuffer(train_sample[0]['features'], dtype=np.float32).reshape(1, feature_dim)
+        val_features = np.frombuffer(val_sample[0]['features'], dtype=np.float32).reshape(1, feature_dim)
+        test_features = np.frombuffer(test_sample[0]['features'], dtype=np.float32).reshape(1, feature_dim)
+        
+        # 检查维度是否一致
+        if (train_features.shape == val_features.shape == test_features.shape):
+            return True
+        
+        return False
     except Exception as e:
         print(f"验证特征结构时出错: {str(e)}")
         return False
     finally:
-        conn.close()
+        db_manager.close()
 
-def create_training_data_from_files():
-    """
-    此方法用于与原始代码保持兼容
-    原来的拆分训练/验证集的方法不再使用
-    """
-    print("提示: 现在使用预定义的Training_Set、Validation_Set和Test_Set表作为数据源")
-    create_features_tables()
-    return
-
-# 保持旧方法名称以兼容现有代码
-split_encoded_images = create_training_data_from_files
 
 if __name__ == "__main__":
-    print(f"开始准备特征表，从现有数据集表中获取文件名...")
-    print(f"数据库路径: {DB_PATH}")
+    print("开始划分数据集...")
     
-    # 创建特征表
-    create_features_tables()
+    # 步骤1: 划分数据集
+    split_stats = split_encoded_images(train_ratio=0.85, val_ratio=0.10, test_ratio=0.05)
     
-    # 获取数据集统计信息
-    stats = get_dataset_split_counts()
-    if stats and stats["total"] > 0:
-        print("\n数据集统计信息:")
-        print(f"训练集 (image_features_clip): {stats['training']} 图像 ({stats['train_ratio']*100:.1f}%)")
-        print(f"验证集 (image_features_clip_V): {stats['validation']} 图像 ({stats['val_ratio']*100:.1f}%)")
-        print(f"测试集 (image_features_clip_T): {stats['test']} 图像 ({stats['test_ratio']*100:.1f}%)")
-        print(f"总计: {stats['total']} 图像")
+    if split_stats:
+        print("\n数据集划分结果:")
+        print(f"训练集: {split_stats['train']} 图像 ({split_stats['train_ratio']*100:.1f}%)")
+        print(f"验证集: {split_stats['val']} 图像 ({split_stats['val_ratio']*100:.1f}%)")
+        print(f"测试集: {split_stats['test']} 图像 ({split_stats['test_ratio']*100:.1f}%)")
+    
+    # 步骤2: 验证特征结构
+    if validate_feature_structures():
+        print("✓ 训练集、验证集和测试集的特征结构一致")
     else:
-        print("\n特征表已创建，但尚未填充数据。请运行图像编码过程填充数据。")
+        print("✗ 特征结构不一致，请检查数据")
     
-    print("\n处理完成")
+    print("处理完成")
