@@ -489,7 +489,7 @@ def main():
     # 数据和输出相关参数
     parser.add_argument('--data', default='./CLIP_Pro_train_merged.pkl',
                        help='训练数据文件路径')
-    parser.add_argument('--val_data', default=None, 
+    parser.add_argument('--val_data', default='./CLIP_Pro_val_merged.pkl', 
                        help='验证集数据文件路径，例如 ./CLIP_Pro_val_merged.pkl')
     parser.add_argument('--out_dir', default='./checkpoints',
                        help='模型保存目录')
@@ -497,7 +497,7 @@ def main():
                        help='保存文件名前缀')
     
     # 训练相关参数
-    parser.add_argument('--epochs', type=int, default=10,
+    parser.add_argument('--epochs', type=int, default=8,
                        help='训练轮数')
     parser.add_argument('--save_every', type=int, default=1,
                        help='每多少个epoch保存一次模型')
@@ -525,7 +525,7 @@ def main():
                        help='CLIP编码长度')
     parser.add_argument('--only_prefix', dest='only_prefix', action='store_true',
                        help='仅训练前缀映射，保持GPT-2冻结')
-    parser.add_argument('--mapping_type', type=str, default='mlp', choices=['mlp', 'transformer'],
+    parser.add_argument('--mapping_type', type=str, default='transformer', choices=['mlp', 'transformer'],
                        help='使用的映射类型: mlp 或 transformer')
     parser.add_argument('--num_layers', type=int, default=8,
                        help='Transformer映射层数')
@@ -533,7 +533,7 @@ def main():
                        help='是否归一化前缀')
     
     # 数据增强参数
-    parser.add_argument('--feature_noise_scale', type=float, default=0.0,
+    parser.add_argument('--feature_noise_scale', type=float, default=0.01,
                        help='CLIP特征噪声比例，0表示不添加噪声')
     
     # 硬件相关参数
