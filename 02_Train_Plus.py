@@ -45,7 +45,7 @@ class ClipProDataset(Dataset):
         tokens, mask = self.pad_tokens(item)
         prefix = self.prefixes[self.caption2embedding[item]]  # Use mapping from caption to embedding
         
-        # 如果启用了特征噪声，添加噪声
+        # 如果启用了特征噪声,添加噪声
         if self.feature_noise_scale > 0:
             noise = torch.randn_like(prefix) * self.feature_noise_scale
             prefix = prefix + noise
@@ -289,9 +289,9 @@ class ClipCaptionPrefix(ClipCaptionModel):
 def save_config(args: argparse.Namespace):
     config = {}
     for key, item in args._get_kwargs():
-        # 特殊处理MappingType类型，将其转换为字符串
+        # 特殊处理MappingType类型,将其转换为字符串
         if key == 'mapping_type' and isinstance(item, MappingType):
-            config[key] = item.value  # 使用枚举的值（字符串）而不是枚举对象
+            config[key] = item.value  # 使用枚举的值(字符串)而不是枚举对象
         else:
             config[key] = item
     out_path = os.path.join(args.out_dir, f"{args.prefix}.json")
@@ -332,7 +332,7 @@ def set_seed(seed):
 def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model: ClipCaptionModel, args,
           lr: float = 2e-5, warmup_steps: int = 5000, output_dir: str = ".", output_prefix: str = ""):
 
-    # 检查CUDA可用性，但不强制使用CPU
+    # 检查CUDA可用性,但不强制使用CPU
     device = torch.device('cuda' if torch.cuda.is_available() and not args.use_cpu else 'cpu')
     print(f"使用设备: {device}")
     
@@ -347,13 +347,13 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
     optimizer = AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
     train_dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     
-    # 创建验证集的DataLoader（如果有验证集）
+    # 创建验证集的DataLoader(如果有验证集)
     val_dataloader = None
     if val_dataset is not None:
         val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
         print(f"验证集大小: {len(val_dataset)} 样本")
     
-    # 计算总训练步数，用于学习率调度
+    # 计算总训练步数,用于学习率调度
     total_steps = len(train_dataloader) * epochs
     warmup_steps = min(warmup_steps, int(total_steps * 0.1))  # 默认warmup为总步数的10%
     
@@ -361,7 +361,7 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
         optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps
     )
     
-    # 记录最佳验证损失，用于保存最佳模型
+    # 记录最佳验证损失,用于保存最佳模型
     best_val_loss = float('inf')
     save_config(args)
     
@@ -425,7 +425,7 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
         history['train_loss'].append(epoch_train_loss)
         print(f"Epoch {epoch+1}/{epochs} 平均训练损失: {epoch_train_loss:.4f}")
         
-        # 验证循环（如果有验证集）
+        # 验证循环(如果有验证集)
         if val_dataloader is not None:
             model.eval()  # 设置为评估模式
             val_loss_sum = 0.0
@@ -490,7 +490,7 @@ def main():
     parser.add_argument('--data', default='./CLIP_Pro_train_merged.pkl',
                        help='训练数据文件路径')
     parser.add_argument('--val_data', default='./CLIP_Pro_val_merged.pkl', 
-                       help='验证集数据文件路径，例如 ./CLIP_Pro_val_merged.pkl')
+                       help='验证集数据文件路径,例如 ./CLIP_Pro_val_merged.pkl')
     parser.add_argument('--out_dir', default='./checkpoints',
                        help='模型保存目录')
     parser.add_argument('--prefix', default='clip_pro_prefix', 
@@ -506,7 +506,7 @@ def main():
     parser.add_argument('--bs', type=int, default=40,
                        help='批次大小')
     parser.add_argument('--seed', type=int, default=42,
-                       help='随机种子，用于结果可复现性')
+                       help='随机种子,用于结果可复现性')
     
     # 学习率和优化器相关参数
     parser.add_argument('--learning_rate', type=float, default=2e-5,
@@ -516,15 +516,15 @@ def main():
     parser.add_argument('--weight_decay', type=float, default=0.01,
                        help='权重衰减系数')
     parser.add_argument('--clip_grad', type=float, default=1.0,
-                       help='梯度裁剪阈值，设为0则禁用梯度裁剪')
+                       help='梯度裁剪阈值,设为0则禁用梯度裁剪')
     
     # 模型相关参数
-    parser.add_argument('--prefix_length', type=int, default=10,
+    parser.add_argument('--prefix_length', type=int, default=40,
                        help='前缀长度')
-    parser.add_argument('--prefix_length_clip', type=int, default=10,
+    parser.add_argument('--prefix_length_clip', type=int, default=40,
                        help='CLIP编码长度')
     parser.add_argument('--only_prefix', dest='only_prefix', action='store_true',
-                       help='仅训练前缀映射，保持GPT-2冻结')
+                       help='仅训练前缀映射,保持GPT-2冻结')
     parser.add_argument('--mapping_type', type=str, default='transformer', choices=['mlp', 'transformer'],
                        help='使用的映射类型: mlp 或 transformer')
     parser.add_argument('--num_layers', type=int, default=8,
@@ -534,27 +534,27 @@ def main():
     
     # 数据增强参数
     parser.add_argument('--feature_noise_scale', type=float, default=0.01,
-                       help='CLIP特征噪声比例，0表示不添加噪声')
+                       help='CLIP特征噪声比例,0表示不添加噪声')
     
     # 硬件相关参数
     parser.add_argument('--use_cpu', dest='use_cpu', action='store_true',
                        help='强制使用CPU进行训练')
     parser.add_argument('--use_mixed_precision', action='store_true',
-                       help='使用混合精度训练（需要CUDA）')
+                       help='使用混合精度训练(需要CUDA)')
     
     args = parser.parse_args()
     
     # 设置随机种子
     set_seed(args.seed)
     
-    # 自动检测CUDA，但如果用户明确指定了使用CPU，则尊重用户选择
+    # 自动检测CUDA,但如果用户明确指定了使用CPU,则尊重用户选择
     if args.use_cpu:
-        print("根据用户设置，强制使用CPU进行训练")
+        print("根据用户设置,强制使用CPU进行训练")
         os.environ['CUDA_VISIBLE_DEVICES'] = ''
     elif torch.cuda.is_available():
-        print(f"检测到CUDA设备，将使用GPU进行训练")
+        print(f"检测到CUDA设备,将使用GPU进行训练")
     else:
-        print("未检测到CUDA设备，将使用CPU进行训练")
+        print("未检测到CUDA设备,将使用CPU进行训练")
     
     # 输出当前设备信息
     print(f"CUDA是否可用: {torch.cuda.is_available()}")
@@ -570,7 +570,7 @@ def main():
                             normalize_prefix=args.normalize_prefix,
                             feature_noise_scale=args.feature_noise_scale)
     
-    # 加载验证数据集（如果提供）
+    # 加载验证数据集(如果提供)
     val_dataset = None
     if args.val_data is not None:
         print(f"加载验证数据: {args.val_data}")
@@ -592,9 +592,9 @@ def main():
             num_layers=args.num_layers, 
             mapping_type=mapping_type
         )
-        print(f"训练模式: 仅训练前缀映射，GPT-2保持冻结")
+        print(f"训练模式: 仅训练前缀映射,GPT-2保持冻结")
         if mapping_type == MappingType.Transformer:
-            print(f"使用 Transformer 映射，层数: {args.num_layers}")
+            print(f"使用 Transformer 映射,层数: {args.num_layers}")
         else:
             print(f"使用 MLP 映射")
     else:
@@ -607,7 +607,7 @@ def main():
         )
         print(f"训练模式: 训练前缀映射和GPT-2")
         if mapping_type == MappingType.Transformer:
-            print(f"使用 Transformer 映射，层数: {args.num_layers}")
+            print(f"使用 Transformer 映射,层数: {args.num_layers}")
         else:
             print(f"使用 MLP 映射")
         sys.stdout.flush()

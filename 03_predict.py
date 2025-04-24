@@ -371,14 +371,14 @@ def main():
     parser.add_argument('--weights', type=str, default='./checkpoints/clip_pro_prefix_best.pt',
                        help='模型权重文件路径')
     parser.add_argument('--prefix_length', type=int, default=40,
-                       help='前缀长度 (默认: 10)')
+                       help='前缀长度 (默认: 40)')
     parser.add_argument('--use_beam_search', action='store_true',
                        help='使用束搜索进行生成')
     parser.add_argument('--beam_size', type=int, default=5,
                        help='束搜索的束大小 (默认: 5)')
     parser.add_argument('--temperature', type=float, default=1.0,
                        help='生成温度 (默认: 1.0)')
-    parser.add_argument('--entry_length', type=int, default=67,
+    parser.add_argument('--entry_length', type=int, default=10,
                        help='生成长度 (默认: 67)')
     parser.add_argument('--output_file', type=str, default='./generated_captions.json',
                        help='输出文件路径 (默认: ./generated_captions.json)')
