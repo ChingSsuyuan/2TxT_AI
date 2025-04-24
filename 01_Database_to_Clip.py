@@ -250,7 +250,7 @@ if __name__ == "__main__":
                        help='只编码已有图像，不下载')
     parser.add_argument('--merge-only', action='store_true',
                        help='只合并已有的批次文件')
-    parser.add_argument('--max-images', type=int, default=None,
+    parser.add_argument('--max-images', type=int, default=200,
                        help='最多下载的图像数量 (默认: 全部)')
     args = parser.parse_args()
     
