@@ -366,7 +366,7 @@ def main():
                        help='测试图像目录 (默认: ./test_images)')
     parser.add_argument('--weights', type=str, default='./checkpoints/clip_pro_prefix_best.pt',
                        help='模型权重文件路径')
-    parser.add_argument('--prefix_length', type=int, default=10,
+    parser.add_argument('--prefix_length', type=int, default=40,
                        help='前缀长度 (默认: 10)')
     parser.add_argument('--use_beam_search', action='store_true',
                        help='使用束搜索进行生成')
@@ -380,7 +380,7 @@ def main():
                        help='输出文件路径 (默认: ./generated_captions.json)')
     parser.add_argument('--clip_model', type=str, default='RN50x4',
                        help='CLIP模型类型 (默认: RN50x4)')
-    parser.add_argument('--mapping_type', type=str, default='mlp', 
+    parser.add_argument('--mapping_type', type=str, default='transformer', 
                        help='映射类型 (mlp/transformer) (默认: mlp)')
     parser.add_argument('--use_cpu', action='store_true',
                        help='强制使用CPU')
