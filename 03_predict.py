@@ -1,4 +1,3 @@
-
 import clip
 import os
 from torch import nn
@@ -7,19 +6,16 @@ import torch
 import torch.nn.functional as nnf
 import sys
 from typing import Tuple, List, Union, Optional
-from transformers import (
-    GPT2Tokenizer,
-    GPT2LMHeadModel,
-    AdamW,
-    get_linear_schedule_with_warmup,
-)
+from transformers import GPT2Tokenizer, GPT2LMHeadModel
 import skimage.io as io
 import PIL.Image
+from PIL import Image
+from enum import Enum
+import argparse
+import glob
+import json
 
-import cog
-
-# import torch
-
+# 设定类型别名
 N = type(None)
 V = np.array
 ARRAY = np.ndarray
@@ -34,63 +30,12 @@ TNS = Union[Tuple[TN, ...], List[TN]]
 TSN = Optional[TS]
 TA = Union[T, ARRAY]
 
-WEIGHTS_PATHS = {
-    "coco": "coco_weights.pt",
-    "conceptual-captions": "conceptual_weights.pt",
-}
-
 D = torch.device
 CPU = torch.device("cpu")
 
-
-class Predictor(cog.Predictor):
-    def setup(self):
-        """Load the model into memory to make running multiple predictions efficient"""
-        self.device = torch.device("cuda")
-        self.clip_model, self.preprocess = clip.load(
-            "ViT-B/32", device=self.device, jit=False
-        )
-        self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-
-        self.models = {}
-        self.prefix_length = 10
-        for key, weights_path in WEIGHTS_PATHS.items():
-            model = ClipCaptionModel(self.prefix_length)
-            model.load_state_dict(torch.load(weights_path, map_location=CPU))
-            model = model.eval()
-            model = model.to(self.device)
-            self.models[key] = model
-
-    @cog.input("image", type=cog.Path, help="Input image")
-    @cog.input(
-        "model",
-        type=str,
-        options=WEIGHTS_PATHS.keys(),
-        default="coco",
-        help="Model to use",
-    )
-    @cog.input(
-        "use_beam_search",
-        type=bool,
-        default=False,
-        help="Whether to apply beam search to generate the output text",
-    )
-    def predict(self, image, model, use_beam_search):
-        """Run a single prediction on the model"""
-        image = io.imread(image)
-        model = self.models[model]
-        pil_image = PIL.Image.fromarray(image)
-        image = self.preprocess(pil_image).unsqueeze(0).to(self.device)
-        with torch.no_grad():
-            prefix = self.clip_model.encode_image(image).to(
-                self.device, dtype=torch.float32
-            )
-            prefix_embed = model.clip_project(prefix).reshape(1, self.prefix_length, -1)
-        if use_beam_search:
-            return generate_beam(model, self.tokenizer, embed=prefix_embed)[0]
-        else:
-            return generate2(model, self.tokenizer, embed=prefix_embed)
-
+class MappingType(Enum):
+    MLP = 'mlp'
+    Transformer = 'transformer'
 
 class MLP(nn.Module):
     def forward(self, x: T) -> T:
@@ -107,8 +52,6 @@ class MLP(nn.Module):
 
 
 class ClipCaptionModel(nn.Module):
-
-    # @functools.lru_cache #FIXME
     def get_dummy_token(self, batch_size: int, device: D) -> T:
         return torch.zeros(
             batch_size, self.prefix_length, dtype=torch.int64, device=device
@@ -121,8 +64,6 @@ class ClipCaptionModel(nn.Module):
         prefix_projections = self.clip_project(prefix).view(
             -1, self.prefix_length, self.gpt_embedding_size
         )
-        # print(embedding_text.size()) #torch.Size([5, 67, 768])
-        # print(prefix_projections.size()) #torch.Size([5, 1, 768])
         embedding_cat = torch.cat((prefix_projections, embedding_text), dim=1)
         if labels is not None:
             dummy_token = self.get_dummy_token(tokens.shape[0], tokens.device)
@@ -130,22 +71,22 @@ class ClipCaptionModel(nn.Module):
         out = self.gpt(inputs_embeds=embedding_cat, labels=labels, attention_mask=mask)
         return out
 
-    def __init__(self, prefix_length: int, prefix_size: int = 512):
+    def __init__(self, prefix_length: int, clip_length: Optional[int] = None, 
+                 prefix_size: int = 640, num_layers: int = 8, 
+                 mapping_type: MappingType = MappingType.MLP):
         super(ClipCaptionModel, self).__init__()
         self.prefix_length = prefix_length
         self.gpt = GPT2LMHeadModel.from_pretrained("gpt2")
         self.gpt_embedding_size = self.gpt.transformer.wte.weight.shape[1]
-        if prefix_length > 10:  # not enough memory
-            self.clip_project = nn.Linear(
-                prefix_size, self.gpt_embedding_size * prefix_length
+        if mapping_type == MappingType.MLP:
+            self.clip_project = MLP(
+                (prefix_size, (self.gpt_embedding_size * prefix_length) // 2, 
+                 self.gpt_embedding_size * prefix_length)
             )
         else:
-            self.clip_project = MLP(
-                (
-                    prefix_size,
-                    (self.gpt_embedding_size * prefix_length) // 2,
-                    self.gpt_embedding_size * prefix_length,
-                )
+            self.clip_project = TransformerMapper(
+                prefix_size, self.gpt_embedding_size, prefix_length,
+                clip_length, num_layers
             )
 
 
@@ -169,7 +110,6 @@ def generate_beam(
     temperature=1.0,
     stop_token: str = ".",
 ):
-
     model.eval()
     stop_token_index = tokenizer.encode(stop_token)[0]
     tokens = None
@@ -255,7 +195,6 @@ def generate2(
     device = next(model.parameters()).device
 
     with torch.no_grad():
-
         for entry_idx in range(entry_count):
             if embed is not None:
                 generated = embed
@@ -267,7 +206,6 @@ def generate2(
                 generated = model.gpt.transformer.wte(tokens)
 
             for i in range(entry_length):
-
                 outputs = model.gpt(inputs_embeds=generated)
                 logits = outputs.logits
                 logits = logits[:, -1, :] / (temperature if temperature > 0 else 1.0)
@@ -298,3 +236,115 @@ def generate2(
             generated_list.append(output_text)
 
     return generated_list[0]
+
+
+def main():
+    parser = argparse.ArgumentParser(description='为图像生成标题')
+    parser.add_argument('--img_dir', type=str, default='./test_images', 
+                       help='测试图像目录 (默认: ./test_images)')
+    parser.add_argument('--weights', type=str, default='./checkpoints/clip_pro_prefix_best.pt',
+                       help='模型权重文件路径')
+    parser.add_argument('--prefix_length', type=int, default=10,
+                       help='前缀长度 (默认: 10)')
+    parser.add_argument('--use_beam_search', action='store_true',
+                       help='使用束搜索进行生成')
+    parser.add_argument('--beam_size', type=int, default=5,
+                       help='束搜索的束大小 (默认: 5)')
+    parser.add_argument('--temperature', type=float, default=1.0,
+                       help='生成温度 (默认: 1.0)')
+    parser.add_argument('--entry_length', type=int, default=67,
+                       help='生成长度 (默认: 67)')
+    parser.add_argument('--output_file', type=str, default='./generated_captions.json',
+                       help='输出文件路径 (默认: ./generated_captions.json)')
+    parser.add_argument('--clip_model', type=str, default='RN50x4',
+                       help='CLIP模型类型 (默认: RN50x4)')
+    parser.add_argument('--mapping_type', type=str, default='mlp', 
+                       help='映射类型 (mlp/transformer) (默认: mlp)')
+    parser.add_argument('--use_cpu', action='store_true',
+                       help='强制使用CPU')
+    args = parser.parse_args()
+    
+    # 设置设备
+    if args.use_cpu:
+        device = torch.device('cpu')
+        print("使用CPU进行推理")
+    else:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        print(f"使用设备: {device}")
+    
+    # 加载CLIP模型
+    print(f"加载CLIP模型: {args.clip_model}")
+    clip_model, preprocess = clip.load(args.clip_model, device=device, jit=False)
+    
+    # 初始化tokenizer
+    tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+    
+    # 加载预训练的模型
+    print(f"加载模型权重: {args.weights}")
+    mapping_type = MappingType.MLP if args.mapping_type == 'mlp' else MappingType.Transformer
+    prefix_length = args.prefix_length
+    
+    # 初始化模型 (根据训练时的参数设置)
+    model = ClipCaptionModel(prefix_length=prefix_length, 
+                            prefix_size=640,  # RN50x4的特征维度
+                            mapping_type=mapping_type)
+    
+    # 加载权重
+    model.load_state_dict(torch.load(args.weights, map_location=device))
+    model = model.eval()
+    model = model.to(device)
+    print("模型加载成功")
+    
+    # 获取测试图像列表
+    img_files = glob.glob(os.path.join(args.img_dir, "*.jpg")) + \
+                glob.glob(os.path.join(args.img_dir, "*.jpeg")) + \
+                glob.glob(os.path.join(args.img_dir, "*.png"))
+    
+    print(f"找到 {len(img_files)} 个图像文件")
+    
+    # 用于保存结果的字典
+    results = {}
+    
+    # 处理每个图像
+    for img_file in img_files:
+        print(f"处理图像: {img_file}")
+        try:
+            # 读取和预处理图像
+            image = Image.open(img_file).convert("RGB")
+            image_input = preprocess(image).unsqueeze(0).to(device)
+            
+            # 使用CLIP模型编码图像
+            with torch.no_grad():
+                prefix = clip_model.encode_image(image_input).to(device, dtype=torch.float32)
+                prefix_embed = model.clip_project(prefix).reshape(1, prefix_length, -1)
+            
+            # 生成标题
+            if args.use_beam_search:
+                generated_text = generate_beam(model, tokenizer, 
+                                             embed=prefix_embed,
+                                             beam_size=args.beam_size,
+                                             entry_length=args.entry_length,
+                                             temperature=args.temperature)[0]
+            else:
+                generated_text = generate2(model, tokenizer, 
+                                         embed=prefix_embed,
+                                         entry_length=args.entry_length,
+                                         temperature=args.temperature)
+            
+            # 保存结果
+            filename = os.path.basename(img_file)
+            results[filename] = generated_text
+            print(f"生成标题: {generated_text}")
+            
+        except Exception as e:
+            print(f"处理图像 {img_file} 时出错: {str(e)}")
+    
+    # 保存生成的标题到JSON文件
+    with open(args.output_file, 'w', encoding='utf-8') as f:
+        json.dump(results, f, ensure_ascii=False, indent=4)
+    
+    print(f"生成的标题已保存到: {args.output_file}")
+
+
+if __name__ == "__main__":
+    main()
