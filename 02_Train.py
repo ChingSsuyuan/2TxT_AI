@@ -311,7 +311,7 @@ def load_model(config_path: str, epoch_or_latest: Union[str, int] = '_latest'):
     return model, parser
 
 
-def train(dataset: ClipProDataset, model: ClipCaptionModel, args,
+def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model: ClipCaptionModel, args,
           lr: float = 2e-5, warmup_steps: int = 5000, output_dir: str = ".", output_prefix: str = ""):
 
     # 检查是否有可用的CUDA设备
@@ -326,14 +326,30 @@ def train(dataset: ClipProDataset, model: ClipCaptionModel, args,
     model.train()
     optimizer = AdamW(model.parameters(), lr=lr)
     train_dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+    
+    # 创建验证集的DataLoader（如果有验证集）
+    val_dataloader = None
+    if val_dataset is not None:
+        val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        print(f"验证集大小: {len(val_dataset)} 样本")
+    
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=warmup_steps, num_training_steps=epochs * len(train_dataloader)
     )
+    
+    # 记录最佳验证损失，用于保存最佳模型
+    best_val_loss = float('inf')
     save_config(args)
+    
     for epoch in range(epochs):
-        print(f">>> Training epoch {epoch}")
+        print(f">>> 训练周期 {epoch}")
         sys.stdout.flush()
+        model.train()  # 设置为训练模式
         progress = tqdm(total=len(train_dataloader), desc=output_prefix)
+        train_loss_sum = 0.0
+        train_samples = 0
+        
+        # 训练循环
         for idx, (tokens, mask, prefix) in enumerate(train_dataloader):
             model.zero_grad()
             try:
@@ -345,6 +361,11 @@ def train(dataset: ClipProDataset, model: ClipCaptionModel, args,
                 optimizer.step()
                 scheduler.step()
                 optimizer.zero_grad()
+                
+                # 累积训练损失
+                train_loss_sum += loss.item() * tokens.size(0)
+                train_samples += tokens.size(0)
+                
                 progress.set_postfix({"loss": loss.item()})
             except RuntimeError as e:
                 if "CUDA" in str(e):
@@ -360,25 +381,77 @@ def train(dataset: ClipProDataset, model: ClipCaptionModel, args,
                     model.state_dict(),
                     os.path.join(output_dir, f"{output_prefix}_latest.pt"),
                 )
+        
         progress.close()
+        
+        # 计算平均训练损失
+        epoch_train_loss = train_loss_sum / train_samples if train_samples > 0 else float('inf')
+        print(f"Epoch {epoch} 平均训练损失: {epoch_train_loss:.4f}")
+        
+        # 验证循环（如果有验证集）
+        if val_dataloader is not None:
+            model.eval()  # 设置为评估模式
+            val_loss_sum = 0.0
+            val_samples = 0
+            print("在验证集上评估模型...")
+            
+            with torch.no_grad():  # 不计算梯度
+                for val_tokens, val_mask, val_prefix in tqdm(val_dataloader, desc="验证"):
+                    try:
+                        val_tokens = val_tokens.to(device)
+                        val_mask = val_mask.to(device)
+                        val_prefix = val_prefix.to(device, dtype=torch.float32)
+                        
+                        val_outputs = model(val_tokens, val_prefix, val_mask)
+                        val_logits = val_outputs.logits[:, val_dataset.prefix_length - 1: -1]
+                        val_loss = nnf.cross_entropy(val_logits.reshape(-1, val_logits.shape[-1]), 
+                                                  val_tokens.flatten(), ignore_index=0)
+                        
+                        # 累积验证损失
+                        val_loss_sum += val_loss.item() * val_tokens.size(0)
+                        val_samples += val_tokens.size(0)
+                    except RuntimeError as e:
+                        if "CUDA" in str(e):
+                            print(f"\n错误: 验证中的CUDA错误 - {str(e)}")
+                            continue
+                        else:
+                            raise e
+            
+            # 计算平均验证损失
+            epoch_val_loss = val_loss_sum / val_samples if val_samples > 0 else float('inf')
+            print(f"Epoch {epoch} 平均验证损失: {epoch_val_loss:.4f}")
+            
+            # 保存最佳模型
+            if epoch_val_loss < best_val_loss:
+                best_val_loss = epoch_val_loss
+                print(f"发现新的最佳模型! 验证损失: {best_val_loss:.4f}")
+                torch.save(
+                    model.state_dict(),
+                    os.path.join(output_dir, f"{output_prefix}_best.pt"),
+                )
+        
+        # 定期保存模型
         if epoch % args.save_every == 0 or epoch == epochs - 1:
             torch.save(
                 model.state_dict(),
                 os.path.join(output_dir, f"{output_prefix}-{epoch:03d}.pt"),
             )
+    
+    print(f"训练完成。最佳验证损失: {best_val_loss:.4f}" if val_dataloader is not None else "训练完成。")
     return model
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', default='./CLIP_Pro_train_merged.pkl')
+    parser.add_argument('--val_data', default='./CLIP_Pro_val_merged.pkl', help='验证集数据文件路径，例如 ./CLIP_Pro_val_merged.pkl')
     parser.add_argument('--out_dir', default='./checkpoints')
     parser.add_argument('--prefix', default='clip_pro_prefix', help='prefix for saved filenames')
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--save_every', type=int, default=1)
     parser.add_argument('--prefix_length', type=int, default=10)
     parser.add_argument('--prefix_length_clip', type=int, default=10)
-    parser.add_argument('--bs', type=int, default=10)
+    parser.add_argument('--bs', type=int, default=40)
     parser.add_argument('--only_prefix', dest='only_prefix', action='store_true')
     parser.add_argument('--mapping_type', type=str, default='mlp', help='mlp/transformer')
     parser.add_argument('--num_layers', type=int, default=8)
@@ -404,8 +477,15 @@ def main():
         print(f"当前CUDA设备: {torch.cuda.current_device()}")
         print(f"CUDA设备名称: {torch.cuda.get_device_name(0)}")
     
-    # Initialize dataset with CLIP_Pro data
+    # 加载训练数据集
+    print(f"加载训练数据: {args.data}")
     dataset = ClipProDataset(args.data, prefix_length, normalize_prefix=args.normalize_prefix)
+    
+    # 加载验证数据集（如果提供）
+    val_dataset = None
+    if args.val_data is not None:
+        print(f"加载验证数据: {args.val_data}")
+        val_dataset = ClipProDataset(args.val_data, prefix_length, normalize_prefix=args.normalize_prefix)
     
     # RN50x4 has 640-dimensional features
     prefix_dim = 640
@@ -421,7 +501,7 @@ def main():
         print("Train both prefix and GPT")
         sys.stdout.flush()
     
-    train(dataset, model, args, output_dir=args.out_dir, output_prefix=args.prefix)
+    train(dataset, val_dataset, model, args, output_dir=args.out_dir, output_prefix=args.prefix)
 
 
 if __name__ == '__main__':
