@@ -72,8 +72,8 @@ class ClipCaptionModel(nn.Module):
         return out
 
     def __init__(self, prefix_length: int, clip_length: Optional[int] = None, 
-                 prefix_size: int = 640, num_layers: int = 8, 
-                 mapping_type: MappingType = MappingType.MLP):
+                prefix_size: int = 640, num_layers: int = 8, 
+                mapping_type: MappingType = MappingType.MLP):
         super(ClipCaptionModel, self).__init__()
         self.prefix_length = prefix_length
         self.gpt = GPT2LMHeadModel.from_pretrained("gpt2")
@@ -81,10 +81,14 @@ class ClipCaptionModel(nn.Module):
         if mapping_type == MappingType.MLP:
             self.clip_project = MLP(
                 (prefix_size, (self.gpt_embedding_size * prefix_length) // 2, 
-                 self.gpt_embedding_size * prefix_length)
+                self.gpt_embedding_size * prefix_length)
             )
         else:
-            self.clip_project = Transformer(
+            # We need to make sure clip_length is properly set
+            if clip_length is None:
+                # Default to a reasonable value if not provided
+                clip_length = 10
+            self.clip_project = TransformerMapper(
                 prefix_size, self.gpt_embedding_size, prefix_length,
                 clip_length, num_layers
             )
@@ -405,10 +409,11 @@ def main():
     print(f"加载模型权重: {args.weights}")
     mapping_type = MappingType.MLP if args.mapping_type == 'mlp' else MappingType.Transformer
     prefix_length = args.prefix_length
-    
+    clip_length = 40
     # 初始化模型 (根据训练时的参数设置)
     model = ClipCaptionModel(prefix_length=prefix_length, 
-                            prefix_size=640,  # RN50x4的特征维度
+                            clip_length=clip_length,
+                            prefix_size=640,  
                             mapping_type=mapping_type)
     
     # 加载权重
