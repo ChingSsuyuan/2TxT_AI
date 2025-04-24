@@ -99,6 +99,39 @@ class ClipCaptionPrefix(ClipCaptionModel):
         self.gpt.eval()
         return self
 
+class TransformerMapper(nn.Module):
+    def __init__(self, dim_clip: int, dim_embedding: int, prefix_length: int,
+                 clip_length: int, num_layers: int = 8):
+        super(TransformerMapper, self).__init__()
+        self.clip_length = clip_length
+        self.transformer = nn.Transformer(
+            d_model=dim_clip,
+            nhead=8,
+            num_encoder_layers=num_layers,
+            num_decoder_layers=num_layers,
+            dim_feedforward=dim_clip * 4,
+            dropout=0.1,
+            activation='gelu'
+        )
+        self.linear = nn.Linear(dim_clip, dim_embedding)
+        self.prefix_const = nn.Parameter(
+            torch.randn(prefix_length, dim_clip)
+        )
+        
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = x.permute(1, 0, 2)  # NLD -> LND
+        prefix_const = self.prefix_const.unsqueeze(1).expand(
+            -1, x.shape[1], -1
+        )
+        if self.clip_length is not None:
+            prefix = x[:self.clip_length]
+            x = x[self.clip_length:]
+        else:
+            prefix = x
+            
+        out = self.transformer(prefix, prefix_const)
+        out = self.linear(out)
+        return out.permute(1, 0, 2)  # LND -> NLD
 
 def generate_beam(
     model,
