@@ -45,7 +45,6 @@ class ClipProDataset(Dataset):
         tokens, mask = self.pad_tokens(item)
         prefix = self.prefixes[self.caption2embedding[item]]  # Use mapping from caption to embedding
         
-        # 如果启用了特征噪声,添加噪声
         if self.feature_noise_scale > 0:
             noise = torch.randn_like(prefix) * self.feature_noise_scale
             prefix = prefix + noise
@@ -339,17 +338,17 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
     model = model.to(device)
     model.train()
     
-    # 使用命令行指定的学习率
+    # set learning rate
     optimizer = AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
     train_dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     
-    # 创建验证集的DataLoader(如果有验证集)
+    # val set
     val_dataloader = None
     if val_dataset is not None:
         val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
         print(f"Validation Set Size: {len(val_dataset)} samples")
     
-    # 计算总训练步数,用于学习率调度
+    # Learning rate modify
     total_steps = len(train_dataloader) * epochs
     warmup_steps = min(warmup_steps, int(total_steps * 0.1)) 
     
@@ -407,19 +406,19 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
         
         progress.close()
         
-        # 计算平均训练损失
+        # compute training error
         epoch_train_loss = train_loss_sum / train_samples if train_samples > 0 else float('inf')
         history['train_loss'].append(epoch_train_loss)
         print(f"Epoch {epoch+1}/{epochs} Avg Training Loss: {epoch_train_loss:.4f}")
         
-        # 验证循环(如果有验证集)
+        # val loop
         if val_dataloader is not None:
-            model.eval()  # 设置为评估模式
+            model.eval()  
             val_loss_sum = 0.0
             val_samples = 0
             print("Evaluating models on validation sets...")
             
-            with torch.no_grad():  # 不计算梯度
+            with torch.no_grad():  
                 for val_tokens, val_mask, val_prefix in tqdm(val_dataloader, desc="Validate"):
                     try:
                         val_tokens = val_tokens.to(device)
@@ -440,12 +439,11 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
                         else:
                             raise e
             
-            # 计算平均验证损失
+            # Calculate the average validation loss
             epoch_val_loss = val_loss_sum / val_samples if val_samples > 0 else float('inf')
             history['val_loss'].append(epoch_val_loss)
             print(f"Epoch {epoch+1}/{epochs} Average Val Loss: {epoch_val_loss:.4f}")
             
-            # 保存最佳模型
             if epoch_val_loss < best_val_loss:
                 best_val_loss = epoch_val_loss
                 history['best_epoch'] = epoch
