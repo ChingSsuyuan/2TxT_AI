@@ -466,14 +466,13 @@ def main():
     
     args.is_rn = True
     prefix_length = args.prefix_length
-    
-    # 输出当前设备信息
-    print(f"CUDA是否可用: {torch.cuda.is_available()}")
+
+    print(f"CUDA: {torch.cuda.is_available()}")
     if torch.cuda.is_available():
         print(f"CUDA num: {torch.cuda.device_count()}")
         print(f"CUDA name: {torch.cuda.get_device_name(0)}")
     
-    # 加载训练数据集
+
     print(f"loading: {args.data}")
     dataset = ClipProDataset(args.data, prefix_length, normalize_prefix=args.normalize_prefix)
     
