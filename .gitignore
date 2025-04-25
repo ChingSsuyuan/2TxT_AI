@@ -8,3 +8,4 @@ coco_image_title_data/vocabulary
 .vscode
 checkpoints/clip_pro_prefix_best.pt
 checkpoints/clip_pro_prefix-001.pt
+checkpoints/clip_pro_prefix-002.pt
