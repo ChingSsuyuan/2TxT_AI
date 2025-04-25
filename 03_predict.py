@@ -374,11 +374,11 @@ def main():
                        help='前缀长度 (默认: 40)')
     parser.add_argument('--use_beam_search', action='store_true',
                        help='使用束搜索进行生成')
-    parser.add_argument('--beam_size', type=int, default=5,
+    parser.add_argument('--beam_size', type=int, default=15,
                        help='束搜索的束大小 (默认: 5)')
-    parser.add_argument('--temperature', type=float, default=1.0,
+    parser.add_argument('--temperature', type=float, default=1.6,
                        help='生成温度 (默认: 1.0)')
-    parser.add_argument('--entry_length', type=int, default=10,
+    parser.add_argument('--entry_length', type=int, default=20,
                        help='生成长度 (默认: 67)')
     parser.add_argument('--output_file', type=str, default='./generated_captions.json',
                        help='输出文件路径 (默认: ./generated_captions.json)')
@@ -388,6 +388,9 @@ def main():
                        help='映射类型 (mlp/transformer) (默认: mlp)')
     parser.add_argument('--use_cpu', action='store_true',
                        help='强制使用CPU')
+    parser.add_argument('--normalize_prefix', action='store_true',
+                   help='Normalize prefix embeddings (should match training)')
+
     args = parser.parse_args()
     
     # 设置设备
@@ -397,55 +400,47 @@ def main():
     else:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print(f"使用设备: {device}")
-    
-    # 加载CLIP模型
+
     print(f"加载CLIP模型: {args.clip_model}")
     clip_model, preprocess = clip.load(args.clip_model, device=device, jit=False)
-    
-    # 初始化tokenizer
     tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
     
-    # 加载预训练的模型
+
     print(f"加载模型权重: {args.weights}")
     mapping_type = MappingType.MLP if args.mapping_type == 'mlp' else MappingType.Transformer
     prefix_length = args.prefix_length
     clip_length = 40
-    # 初始化模型 (根据训练时的参数设置)
     model = ClipCaptionModel(prefix_length=prefix_length, 
                             clip_length=clip_length,
                             prefix_size=640,  
                             mapping_type=mapping_type)
-    
-    # 加载权重
-    model.load_state_dict(torch.load(args.weights, map_location=device))
+
+    model.load_state_dict(torch.load(args.weights, map_location=device), strict=False)
     model = model.eval()
     model = model.to(device)
     print("模型加载成功")
-    
-    # 获取测试图像列表
+
     img_files = glob.glob(os.path.join(args.img_dir, "*.jpg")) + \
                 glob.glob(os.path.join(args.img_dir, "*.jpeg")) + \
                 glob.glob(os.path.join(args.img_dir, "*.png"))
     
     print(f"找到 {len(img_files)} 个图像文件")
-    
-    # 用于保存结果的字典
+
     results = {}
-    
-    # 处理每个图像
+
     for img_file in img_files:
         print(f"处理图像: {img_file}")
         try:
-            # 读取和预处理图像
+
             image = Image.open(img_file).convert("RGB")
             image_input = preprocess(image).unsqueeze(0).to(device)
-            
-            # 使用CLIP模型编码图像
             with torch.no_grad():
                 prefix = clip_model.encode_image(image_input).to(device, dtype=torch.float32)
                 prefix_embed = model.clip_project(prefix).reshape(1, prefix_length, -1)
-            
-            # 生成标题
+            if args.normalize_prefix: 
+                prefix = prefix.float() 
+                prefix = prefix / prefix.norm(2, -1)
+
             if args.use_beam_search:
                 generated_text = generate_beam(model, tokenizer, 
                                              embed=prefix_embed,
@@ -457,8 +452,6 @@ def main():
                                          embed=prefix_embed,
                                          entry_length=args.entry_length,
                                          temperature=args.temperature)
-            
-            # 保存结果
             filename = os.path.basename(img_file)
             results[filename] = generated_text
             print(f"生成标题: {generated_text}")

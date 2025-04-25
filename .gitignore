@@ -6,4 +6,6 @@ model_output
 coco_processing_results
 coco_image_title_data/vocabulary
 .vscode
-checkpoints
+
+checkpoints/clip_pro_prefix_best.pt
+checkpoints/clip_pro_prefix-001.pt
