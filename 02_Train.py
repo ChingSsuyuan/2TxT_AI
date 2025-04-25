@@ -444,7 +444,7 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', default='./CLIP_Pro_train_merged.pkl')
-    parser.add_argument('--val_data', default='./CLIP_Pro_val_merged.pkl', help='验证集数据文件路径，例如 ./CLIP_Pro_val_merged.pkl')
+    parser.add_argument('--val_data', default='./CLIP_Pro_val_merged.pkl', help='./CLIP_Pro_val_merged.pkl')
     parser.add_argument('--out_dir', default='./checkpoints')
     parser.add_argument('--prefix', default='clip_pro_prefix', help='prefix for saved filenames')
     parser.add_argument('--epochs', type=int, default=10)
@@ -457,28 +457,24 @@ def main():
     parser.add_argument('--num_layers', type=int, default=8)
     parser.add_argument('--is_rn', dest='is_rn', action='store_true')
     parser.add_argument('--normalize_prefix', dest='normalize_prefix', action='store_true')
-    parser.add_argument('--use_cpu', dest='use_cpu', action='store_true', help='强制使用CPU进行训练')
+    parser.add_argument('--use_cpu', dest='use_cpu', action='store_true', help='Use CPU_Only')
     args = parser.parse_args()
-    
-    # 设置是否使用CPU
+
     if args.use_cpu:
-        print("强制使用CPU进行训练")
-        # 将环境变量设置为禁用CUDA
+        print("Use CPU")
         os.environ['CUDA_VISIBLE_DEVICES'] = ''
     
-    # Set is_rn to True for RN50x4
     args.is_rn = True
     prefix_length = args.prefix_length
     
     # 输出当前设备信息
     print(f"CUDA是否可用: {torch.cuda.is_available()}")
     if torch.cuda.is_available():
-        print(f"可用的CUDA设备数量: {torch.cuda.device_count()}")
-        print(f"当前CUDA设备: {torch.cuda.current_device()}")
-        print(f"CUDA设备名称: {torch.cuda.get_device_name(0)}")
+        print(f"CUDA num: {torch.cuda.device_count()}")
+        print(f"CUDA name: {torch.cuda.get_device_name(0)}")
     
     # 加载训练数据集
-    print(f"加载训练数据: {args.data}")
+    print(f"loading: {args.data}")
     dataset = ClipProDataset(args.data, prefix_length, normalize_prefix=args.normalize_prefix)
     
     # 加载验证数据集（如果提供）

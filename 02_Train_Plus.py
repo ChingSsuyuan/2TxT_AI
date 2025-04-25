@@ -289,9 +289,8 @@ class ClipCaptionPrefix(ClipCaptionModel):
 def save_config(args: argparse.Namespace):
     config = {}
     for key, item in args._get_kwargs():
-        # 特殊处理MappingType类型,将其转换为字符串
         if key == 'mapping_type' and isinstance(item, MappingType):
-            config[key] = item.value  # 使用枚举的值(字符串)而不是枚举对象
+            config[key] = item.value 
         else:
             config[key] = item
     out_path = os.path.join(args.out_dir, f"{args.prefix}.json")
@@ -321,7 +320,6 @@ def load_model(config_path: str, epoch_or_latest: Union[str, int] = '_latest'):
 
 
 def set_seed(seed):
-    """设置随机种子确保可重复性"""
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
@@ -331,10 +329,8 @@ def set_seed(seed):
 
 def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model: ClipCaptionModel, args,
           lr: float = 2e-5, warmup_steps: int = 5000, output_dir: str = ".", output_prefix: str = ""):
-
-    # 检查CUDA可用性,但不强制使用CPU
     device = torch.device('cuda' if torch.cuda.is_available() and not args.use_cpu else 'cpu')
-    print(f"使用设备: {device}")
+    print(f"Using Device: {device}")
     
     batch_size = args.bs
     epochs = args.epochs
@@ -351,21 +347,18 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
     val_dataloader = None
     if val_dataset is not None:
         val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-        print(f"验证集大小: {len(val_dataset)} 样本")
+        print(f"Validation Set Size: {len(val_dataset)} samples")
     
     # 计算总训练步数,用于学习率调度
     total_steps = len(train_dataloader) * epochs
-    warmup_steps = min(warmup_steps, int(total_steps * 0.1))  # 默认warmup为总步数的10%
+    warmup_steps = min(warmup_steps, int(total_steps * 0.1)) 
     
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps
     )
     
-    # 记录最佳验证损失,用于保存最佳模型
     best_val_loss = float('inf')
     save_config(args)
-    
-    # 记录训练历史
     history = {
         'train_loss': [],
         'val_loss': [] if val_dataset else None,
@@ -373,14 +366,12 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
     }
     
     for epoch in range(epochs):
-        print(f">>> 训练周期 {epoch+1}/{epochs}")
+        print(f">>> Training Cycle: {epoch+1}/{epochs}")
         sys.stdout.flush()
-        model.train()  # 设置为训练模式
+        model.train() 
         progress = tqdm(total=len(train_dataloader), desc=output_prefix)
         train_loss_sum = 0.0
         train_samples = 0
-        
-        # 训练循环
         for idx, (tokens, mask, prefix) in enumerate(train_dataloader):
             model.zero_grad()
             try:
@@ -389,8 +380,6 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
                 logits = outputs.logits[:, dataset.prefix_length - 1: -1]
                 loss = nnf.cross_entropy(logits.reshape(-1, logits.shape[-1]), tokens.flatten(), ignore_index=0)
                 loss.backward()
-                
-                # 梯度裁剪防止梯度爆炸
                 if args.clip_grad > 0:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_grad)
                     
@@ -398,15 +387,13 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
                 scheduler.step()
                 optimizer.zero_grad()
                 
-                # 累积训练损失
                 train_loss_sum += loss.item() * tokens.size(0)
                 train_samples += tokens.size(0)
                 
                 progress.set_postfix({"loss": loss.item(), "lr": scheduler.get_last_lr()[0]})
             except RuntimeError as e:
                 if "CUDA" in str(e):
-                    print(f"\n错误: CUDA相关错误 - {str(e)}")
-                    print("尝试减小batch size或使用CPU: --bs 16 --use_cpu")
+                    print(f"\nError: CUDA Error - {str(e)}")
                     sys.exit(1)
                 else:
                     raise e
@@ -423,17 +410,17 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
         # 计算平均训练损失
         epoch_train_loss = train_loss_sum / train_samples if train_samples > 0 else float('inf')
         history['train_loss'].append(epoch_train_loss)
-        print(f"Epoch {epoch+1}/{epochs} 平均训练损失: {epoch_train_loss:.4f}")
+        print(f"Epoch {epoch+1}/{epochs} Avg Training Loss: {epoch_train_loss:.4f}")
         
         # 验证循环(如果有验证集)
         if val_dataloader is not None:
             model.eval()  # 设置为评估模式
             val_loss_sum = 0.0
             val_samples = 0
-            print("在验证集上评估模型...")
+            print("Evaluating models on validation sets...")
             
             with torch.no_grad():  # 不计算梯度
-                for val_tokens, val_mask, val_prefix in tqdm(val_dataloader, desc="验证"):
+                for val_tokens, val_mask, val_prefix in tqdm(val_dataloader, desc="Validate"):
                     try:
                         val_tokens = val_tokens.to(device)
                         val_mask = val_mask.to(device)
@@ -444,12 +431,11 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
                         val_loss = nnf.cross_entropy(val_logits.reshape(-1, val_logits.shape[-1]), 
                                                   val_tokens.flatten(), ignore_index=0)
                         
-                        # 累积验证损失
                         val_loss_sum += val_loss.item() * val_tokens.size(0)
                         val_samples += val_tokens.size(0)
                     except RuntimeError as e:
                         if "CUDA" in str(e):
-                            print(f"\n错误: 验证中的CUDA错误 - {str(e)}")
+                            print(f"\nError:  - {str(e)}")
                             continue
                         else:
                             raise e
@@ -457,131 +443,108 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
             # 计算平均验证损失
             epoch_val_loss = val_loss_sum / val_samples if val_samples > 0 else float('inf')
             history['val_loss'].append(epoch_val_loss)
-            print(f"Epoch {epoch+1}/{epochs} 平均验证损失: {epoch_val_loss:.4f}")
+            print(f"Epoch {epoch+1}/{epochs} Average Val Loss: {epoch_val_loss:.4f}")
             
             # 保存最佳模型
             if epoch_val_loss < best_val_loss:
                 best_val_loss = epoch_val_loss
                 history['best_epoch'] = epoch
-                print(f"发现新的最佳模型! 验证损失: {best_val_loss:.4f}")
+                print(f"Discover the new best model! Validation Loss: {best_val_loss:.4f}")
                 torch.save(
                     model.state_dict(),
                     os.path.join(output_dir, f"{output_prefix}_best.pt"),
                 )
-        
-        # 定期保存模型
         if epoch % args.save_every == 0 or epoch == epochs - 1:
             torch.save(
                 model.state_dict(),
                 os.path.join(output_dir, f"{output_prefix}-{epoch:03d}.pt"),
             )
-    
-    # 保存训练历史
+
     with open(os.path.join(output_dir, f"{output_prefix}_history.json"), 'w') as f:
         json.dump(history, f, indent=4)
     
-    print(f"训练完成。最佳验证损失: {best_val_loss:.4f}" if val_dataloader is not None else "训练完成。")
+    print(f"Training Completed! Best Validation Error: {best_val_loss:.4f}" if val_dataloader is not None else "Complete!")
     return model
 
 
 def main():
     parser = argparse.ArgumentParser()
-    # 数据和输出相关参数
     parser.add_argument('--data', default='./CLIP_Pro_train_merged.pkl',
-                       help='训练数据文件路径')
+                       help='Training data file path')
     parser.add_argument('--val_data', default='./CLIP_Pro_val_merged.pkl', 
-                       help='验证集数据文件路径,例如 ./CLIP_Pro_val_merged.pkl')
+                       help='./CLIP_Pro_val_merged.pkl')
     parser.add_argument('--out_dir', default='./checkpoints',
-                       help='模型保存目录')
+                       help='Model save directory')
     parser.add_argument('--prefix', default='clip_pro_prefix', 
-                       help='保存文件名前缀')
-    
-    # 训练相关参数
+                       help='Prefix name')
     parser.add_argument('--epochs', type=int, default=8,
-                       help='训练轮数')
+                       help='epochs')
     parser.add_argument('--save_every', type=int, default=1,
-                       help='每多少个epoch保存一次模型')
+                       help='Saves the model every i epochs')
     parser.add_argument('--save_steps', type=int, default=10000,
-                       help='每多少步保存一次最新模型')
+                       help='save_steps')
     parser.add_argument('--bs', type=int, default=40,
-                       help='批次大小')
+                       help='Batch size')
     parser.add_argument('--seed', type=int, default=42,
-                       help='随机种子,用于结果可复现性')
-    
-    # 学习率和优化器相关参数
+                       help='random seed')
     parser.add_argument('--learning_rate', type=float, default=2e-5,
-                       help='学习率')
+                       help='learning rate')
     parser.add_argument('--warmup_ratio', type=float, default=0.1,
-                       help='预热步数比例')
+                       help='warmup ratio')
     parser.add_argument('--weight_decay', type=float, default=0.01,
-                       help='权重衰减系数')
+                       help='weight decay')
     parser.add_argument('--clip_grad', type=float, default=1.0,
-                       help='梯度裁剪阈值,设为0则禁用梯度裁剪')
+                       help='gradient descent rate')
     
-    # 模型相关参数
+    # Model settings
     parser.add_argument('--prefix_length', type=int, default=40,
-                       help='前缀长度')
+                       help='prefix length')
     parser.add_argument('--prefix_length_clip', type=int, default=40,
-                       help='CLIP编码长度')
+                       help='CLIP length')
     parser.add_argument('--only_prefix', dest='only_prefix', action='store_true',
-                       help='仅训练前缀映射,保持GPT-2冻结')
+                       help='')
     parser.add_argument('--mapping_type', type=str, default='transformer', choices=['mlp', 'transformer'],
-                       help='使用的映射类型: mlp 或 transformer')
+                       help=' mlp or transformer')
     parser.add_argument('--num_layers', type=int, default=8,
-                       help='Transformer映射层数')
+                       help='Transformer layers')
     parser.add_argument('--normalize_prefix', dest='normalize_prefix', action='store_true',
-                       help='是否归一化前缀')
+                       help='normalize')
     
-    # 数据增强参数
+    # Noise:
     parser.add_argument('--feature_noise_scale', type=float, default=0.01,
-                       help='CLIP特征噪声比例,0表示不添加噪声')
-    
-    # 硬件相关参数
+                       help='Noise rate')
     parser.add_argument('--use_cpu', dest='use_cpu', action='store_true',
-                       help='强制使用CPU进行训练')
+                       help='Force CPU for training')
     parser.add_argument('--use_mixed_precision', action='store_true',
-                       help='使用混合精度训练(需要CUDA)')
+                       help='mixed precision')
     
     args = parser.parse_args()
-    
-    # 设置随机种子
     set_seed(args.seed)
-    
-    # 自动检测CUDA,但如果用户明确指定了使用CPU,则尊重用户选择
     if args.use_cpu:
-        print("根据用户设置,强制使用CPU进行训练")
+        print("Forces the CPU to train according to user settings.")
         os.environ['CUDA_VISIBLE_DEVICES'] = ''
     elif torch.cuda.is_available():
-        print(f"检测到CUDA设备,将使用GPU进行训练")
+        print(f"CUDA devices are detected and will be trained using GPUs.")
     else:
-        print("未检测到CUDA设备,将使用CPU进行训练")
+        print("No CUDA device detected, CPU will be used for training.")
     
-    # 输出当前设备信息
-    print(f"CUDA是否可用: {torch.cuda.is_available()}")
+    print(f"CUDA avaliable: {torch.cuda.is_available()}")
     if torch.cuda.is_available() and not args.use_cpu:
-        print(f"可用的CUDA设备数量: {torch.cuda.device_count()}")
-        print(f"当前CUDA设备: {torch.cuda.current_device()}")
-        print(f"CUDA设备名称: {torch.cuda.get_device_name(0)}")
-    
-    # 加载训练数据集
-    print(f"加载训练数据: {args.data}")
+        print(f"CUDA Device name: {torch.cuda.get_device_name(0)}")
+    print(f"Loading training set: {args.data}")
     dataset = ClipProDataset(args.data, 
                             args.prefix_length, 
                             normalize_prefix=args.normalize_prefix,
                             feature_noise_scale=args.feature_noise_scale)
     
-    # 加载验证数据集(如果提供)
     val_dataset = None
     if args.val_data is not None:
-        print(f"加载验证数据: {args.val_data}")
+        print(f"Loading validation set: {args.val_data}")
         val_dataset = ClipProDataset(args.val_data, 
                                     args.prefix_length, 
                                     normalize_prefix=args.normalize_prefix)
-    
-    # 使用RN50x4的特征维度 640
     prefix_dim = 640
     
-    # 设置映射类型
     mapping_type = MappingType.MLP if args.mapping_type == 'mlp' else MappingType.Transformer
     
     if args.only_prefix:
@@ -592,11 +555,11 @@ def main():
             num_layers=args.num_layers, 
             mapping_type=mapping_type
         )
-        print(f"训练模式: 仅训练前缀映射,GPT-2保持冻结")
+        print(f"Training mode: only prefix mapping is trained, GPT-2 is kept frozen.")
         if mapping_type == MappingType.Transformer:
-            print(f"使用 Transformer 映射,层数: {args.num_layers}")
+            print(f"Use Transformer, layers: {args.num_layers}")
         else:
-            print(f"使用 MLP 映射")
+            print(f"Use MLP ")
     else:
         model = ClipCaptionModel(
             prefix_length=args.prefix_length, 
@@ -605,22 +568,21 @@ def main():
             num_layers=args.num_layers, 
             mapping_type=mapping_type
         )
-        print(f"训练模式: 训练前缀映射和GPT-2")
+        print(f"Training mode: training prefix mapping and GPT-2")
         if mapping_type == MappingType.Transformer:
-            print(f"使用 Transformer 映射,层数: {args.num_layers}")
+            print(f"Use Transformer, layers: {args.num_layers}")
         else:
-            print(f"使用 MLP 映射")
+            print(f"Use MLP ")
         sys.stdout.flush()
     
-    # 打印模型总结
     print("-" * 50)
-    print("模型配置摘要:")
-    print(f"- 前缀长度: {args.prefix_length}")
-    print(f"- 批次大小: {args.bs}")
-    print(f"- 学习率: {args.learning_rate}")
-    print(f"- 特征噪声比例: {args.feature_noise_scale}")
-    print(f"- 映射类型: {args.mapping_type}")
-    print(f"- 使用设备: {'CPU' if args.use_cpu or not torch.cuda.is_available() else 'GPU'}")
+    print("Summary of model configurations:")
+    print(f"- Prefix Length: {args.prefix_length}")
+    print(f"- Batch Size   : {args.bs}")
+    print(f"- Learning Rate: {args.learning_rate}")
+    print(f"- Noise Rate   : {args.feature_noise_scale}")
+    print(f"- Mapping Type : {args.mapping_type}")
+    print(f"- Device       : {'CPU' if args.use_cpu or not torch.cuda.is_available() else 'GPU'}")
     print("-" * 50)
     
     train(dataset, val_dataset, model, args, 
