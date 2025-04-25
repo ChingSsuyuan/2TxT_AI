@@ -13,12 +13,12 @@ import requests
 from urllib.parse import quote
 
 app = Flask(__name__)
-
+ 
 # Configuration
 UPLOAD_FOLDER = 'test_images'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 CAPTION_OUTPUT = 'generated_captions.json'
-MODEL_WEIGHTS = './checkpoints/clip_pro_prefix-001.pt'  # Path to your model weights
+MODEL_WEIGHTS = './checkpoints/clip_pro_prefix-best.pt'  # Path to your model weights
 CLIP_MODEL = 'RN50x4'  # CLIP model type
 USE_CPU = True  # Set to True to force CPU usage
 

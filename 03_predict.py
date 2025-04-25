@@ -368,7 +368,7 @@ def main():
     parser = argparse.ArgumentParser(description='为图像生成标题')
     parser.add_argument('--img_dir', type=str, default='./test_images', 
                        help='测试图像目录 (默认: ./test_images)')
-    parser.add_argument('--weights', type=str, default='./checkpoints/clip_pro_prefix_best.pt',
+    parser.add_argument('--weights', type=str, default='./checkpoints/clip_pro_prefix-002.pt',
                        help='模型权重文件路径')
     parser.add_argument('--prefix_length', type=int, default=40,
                        help='前缀长度 (默认: 40)')
