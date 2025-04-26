@@ -449,15 +449,15 @@ def main():
                                          temperature=args.temperature)
             filename = os.path.basename(img_file)
             results[filename] = generated_text
-            print(f"生成标题: {generated_text}")
+            print(f"Generated Caption: {generated_text}")
             
         except Exception as e:
-            print(f"处理图像 {img_file} 时出错: {str(e)}")
+            print(f"Error {img_file} : {str(e)}")
     
     with open(args.output_file, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
     
-    print(f"生成的标题已保存到: {args.output_file}")
+    print(f"Save captions to: {args.output_file}")
 
 
 if __name__ == "__main__":
