@@ -78,7 +78,7 @@ python app.py
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/yourusername/clip-pro.git
+git clone https://github.com/ChingSsuyuan/Clip_Pro_Caption.git
 cd clip-pro
 ```
 
