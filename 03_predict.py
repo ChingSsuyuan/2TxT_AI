@@ -361,25 +361,25 @@ def generate2(
 
 
 def main():
-    parser = argparse.ArgumentParser(description='为图像生成标题')
+    parser = argparse.ArgumentParser(description='Generate captions for images')
     parser.add_argument('--img_dir', type=str, default='./test_images', 
-                       help='测试图像目录 (默认: ./test_images)')
+                       help='Test Image Catalogue (default: ./test_images)')
     parser.add_argument('--weights', type=str, default='./checkpoints/clip_pro_prefix-002.pt',
-                       help='模型权重文件路径')
+                       help='Model weights file path')
     parser.add_argument('--prefix_length', type=int, default=40,
-                       help='前缀长度 (默认: 40)')
+                       help='prefix length (default: 40)')
     parser.add_argument('--use_beam_search', action='store_true',
-                       help='使用束搜索进行生成')
+                       help='Generate using beam search')
     parser.add_argument('--beam_size', type=int, default=15,
-                       help='束搜索的束大小 (默认: 5)')
+                       help='beam_size ')
     parser.add_argument('--temperature', type=float, default=1.6,
-                       help='生成温度 (默认: 1.0)')
+                       help='temperature ')
     parser.add_argument('--entry_length', type=int, default=20,
-                       help='生成长度 (默认: 67)')
+                       help='entry_length ')
     parser.add_argument('--output_file', type=str, default='./generated_captions.json',
-                       help='输出文件路径 (默认: ./generated_captions.json)')
+                       help='Output file path')
     parser.add_argument('--clip_model', type=str, default='RN50x4',
-                       help='CLIP模型类型 (默认: RN50x4)')
+                       help='CLIP model type ')
     parser.add_argument('--mapping_type', type=str, default='transformer', 
                        help='映射类型 (mlp/transformer) (默认: mlp)')
     parser.add_argument('--use_cpu', action='store_true',
