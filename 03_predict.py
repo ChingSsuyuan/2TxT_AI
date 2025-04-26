@@ -391,17 +391,17 @@ def main():
     
     if args.use_cpu:
         device = torch.device('cpu')
-        print("使用CPU进行推理")
+        print("Reasoning with the CPU")
     else:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        print(f"使用设备: {device}")
+        print(f"Use device: {device}")
 
-    print(f"加载CLIP模型: {args.clip_model}")
+    print(f"Loading the CLIP model: {args.clip_model}")
     clip_model, preprocess = clip.load(args.clip_model, device=device, jit=False)
     tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
     
 
-    print(f"加载模型权重: {args.weights}")
+    print(f"Loading: {args.weights}")
     mapping_type = MappingType.MLP if args.mapping_type == 'mlp' else MappingType.Transformer
     prefix_length = args.prefix_length
     clip_length = 40
@@ -413,18 +413,18 @@ def main():
     model.load_state_dict(torch.load(args.weights, map_location=device), strict=False)
     model = model.eval()
     model = model.to(device)
-    print("模型加载成功")
+    print("Loading Model Successfully")
 
     img_files = glob.glob(os.path.join(args.img_dir, "*.jpg")) + \
                 glob.glob(os.path.join(args.img_dir, "*.jpeg")) + \
                 glob.glob(os.path.join(args.img_dir, "*.png"))
     
-    print(f"找到 {len(img_files)} 个图像文件")
+    print(f"Find {len(img_files)} images")
 
     results = {}
 
     for img_file in img_files:
-        print(f"处理图像: {img_file}")
+        print(f"Processing: {img_file}")
         try:
 
             image = Image.open(img_file).convert("RGB")
