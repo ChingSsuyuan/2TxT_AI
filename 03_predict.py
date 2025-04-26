@@ -15,7 +15,7 @@ import argparse
 import glob
 import json
 
-# 设定类型别名
+
 N = type(None)
 V = np.array
 ARRAY = np.ndarray
@@ -84,9 +84,7 @@ class ClipCaptionModel(nn.Module):
                 self.gpt_embedding_size * prefix_length)
             )
         else:
-            # We need to make sure clip_length is properly set
             if clip_length is None:
-                # Default to a reasonable value if not provided
                 clip_length = 10
             self.clip_project = TransformerMapper(
                 prefix_size, self.gpt_embedding_size, prefix_length,
@@ -126,9 +124,7 @@ class MultiHeadAttention(nn.Module):
         y = y if y is not None else x
         b, n, c = x.shape
         _, m, d = y.shape
-        # b n h dh
         queries = self.to_queries(x).reshape(b, n, self.num_heads, c // self.num_heads)
-        # b m 2 h dh
         keys_values = self.to_keys_values(y).reshape(b, m, 2, self.num_heads, c // self.num_heads)
         keys, values = keys_values[:, :, 0], keys_values[:, :, 1]
         attention = torch.einsum('bnhd,bmhd->bnmh', queries, keys) * self.scale
@@ -173,11 +169,11 @@ class Transformer(nn.Module):
 
     def forward(self, x, y=None, mask=None):
         for i, layer in enumerate(self.layers):
-            if i % 2 == 0 and self.enc_dec: # cross
+            if i % 2 == 0 and self.enc_dec:
                 x = layer(x, y)
-            elif self.enc_dec:  # self
+            elif self.enc_dec:  
                 x = layer(x, x, mask)
-            else:  # self or cross
+            else:  
                 x = layer(x, y, mask)
         return x
 
@@ -190,11 +186,11 @@ class Transformer(nn.Module):
             num_layers = num_layers * 2
         layers = []
         for i in range(num_layers):
-            if i % 2 == 0 and enc_dec:  # cross
+            if i % 2 == 0 and enc_dec:  
                 layers.append(TransformerLayer(dim_self, dim_ref, num_heads, mlp_ratio, act=act, norm_layer=norm_layer))
-            elif enc_dec:  # self
+            elif enc_dec:  
                 layers.append(TransformerLayer(dim_self, dim_self, num_heads, mlp_ratio, act=act, norm_layer=norm_layer))
-            else:  # self or cross
+            else:  
                 layers.append(TransformerLayer(dim_self, dim_ref, num_heads, mlp_ratio, act=act, norm_layer=norm_layer))
         self.layers = nn.ModuleList(layers)
 
@@ -308,7 +304,7 @@ def generate2(
     prompt=None,
     embed=None,
     entry_count=1,
-    entry_length=67,  # maximum number of words
+    entry_length=30,  
     top_p=0.8,
     temperature=1.0,
     stop_token: str = ".",
@@ -393,7 +389,6 @@ def main():
 
     args = parser.parse_args()
     
-    # 设置设备
     if args.use_cpu:
         device = torch.device('cpu')
         print("使用CPU进行推理")
@@ -459,7 +454,6 @@ def main():
         except Exception as e:
             print(f"处理图像 {img_file} 时出错: {str(e)}")
     
-    # 保存生成的标题到JSON文件
     with open(args.output_file, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
     
