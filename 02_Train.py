@@ -309,7 +309,6 @@ def load_model(config_path: str, epoch_or_latest: Union[str, int] = '_latest'):
 def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model: ClipCaptionModel, args,
           lr: float = 2e-5, warmup_steps: int = 5000, output_dir: str = ".", output_prefix: str = ""):
 
-    # 检查是否有可用的CUDA设备
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print(f"使用设备: {device}")
     
@@ -372,18 +371,16 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
         
         progress.close()
         
-        # 计算平均训练损失
         epoch_train_loss = train_loss_sum / train_samples if train_samples > 0 else float('inf')
         print(f"Epoch {epoch} 平均训练损失: {epoch_train_loss:.4f}")
         
-        # 验证循环（如果有验证集）
         if val_dataloader is not None:
-            model.eval()  # 设置为评估模式
+            model.eval()  
             val_loss_sum = 0.0
             val_samples = 0
             print("在验证集上评估模型...")
             
-            with torch.no_grad():  # 不计算梯度
+            with torch.no_grad():  
                 for val_tokens, val_mask, val_prefix in tqdm(val_dataloader, desc="验证"):
                     try:
                         val_tokens = val_tokens.to(device)
@@ -395,7 +392,6 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
                         val_loss = nnf.cross_entropy(val_logits.reshape(-1, val_logits.shape[-1]), 
                                                   val_tokens.flatten(), ignore_index=0)
                         
-                        # 累积验证损失
                         val_loss_sum += val_loss.item() * val_tokens.size(0)
                         val_samples += val_tokens.size(0)
                     except RuntimeError as e:
@@ -405,11 +401,8 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
                         else:
                             raise e
             
-            # 计算平均验证损失
             epoch_val_loss = val_loss_sum / val_samples if val_samples > 0 else float('inf')
             print(f"Epoch {epoch} 平均验证损失: {epoch_val_loss:.4f}")
-            
-            # 保存最佳模型
             if epoch_val_loss < best_val_loss:
                 best_val_loss = epoch_val_loss
                 print(f"发现新的最佳模型! 验证损失: {best_val_loss:.4f}")
@@ -418,7 +411,6 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
                     os.path.join(output_dir, f"{output_prefix}_best.pt"),
                 )
         
-        # 定期保存模型
         if epoch % args.save_every == 0 or epoch == epochs - 1:
             torch.save(
                 model.state_dict(),
