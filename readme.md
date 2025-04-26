@@ -153,6 +153,23 @@ python app.py
 - [GPT-2](https://huggingface.co/gpt2): Transformer-based language model
 - [COCO Dataset](https://cocodataset.org/): Common Objects in Context dataset
 
+This project is based on the following research papers:
+
+```
+@article{nukrai2022text,
+  title={Text-Only Training for Image Captioning using Noise-Injected CLIP},
+  author={Nukrai, David and Mokady, Ron and Globerson, Amir},
+  journal={arXiv preprint arXiv:2211.00575},
+  year={2022}
+}
+@article{mokady2021clipcap,
+  title={ClipCap: CLIP Prefix for Image Captioning},
+  author={Mokady, Ron and Hertz, Amir and Bermano, Amit H},
+  journal={arXiv preprint arXiv:2111.09734},
+  year={2021}
+}
+```
+
 ## License
 
 This project is released under the MIT License.
