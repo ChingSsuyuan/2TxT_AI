@@ -476,13 +476,12 @@ def main():
     print(f"loading: {args.data}")
     dataset = ClipProDataset(args.data, prefix_length, normalize_prefix=args.normalize_prefix)
     
-    # 加载验证数据集（如果提供）
+
     val_dataset = None
     if args.val_data is not None:
         print(f"加载验证数据: {args.val_data}")
         val_dataset = ClipProDataset(args.val_data, prefix_length, normalize_prefix=args.normalize_prefix)
     
-    # RN50x4 has 640-dimensional features
     prefix_dim = 640
     
     args.mapping_type = {'mlp': MappingType.MLP, 'transformer': MappingType.Transformer}[args.mapping_type]
