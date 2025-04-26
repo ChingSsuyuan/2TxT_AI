@@ -381,9 +381,9 @@ def main():
     parser.add_argument('--clip_model', type=str, default='RN50x4',
                        help='CLIP model type ')
     parser.add_argument('--mapping_type', type=str, default='transformer', 
-                       help='映射类型 (mlp/transformer) (默认: mlp)')
+                       help='Mapping Type (mlp/transformer) (default: mlp)')
     parser.add_argument('--use_cpu', action='store_true',
-                       help='强制使用CPU')
+                       help='Forced CPU usage')
     parser.add_argument('--normalize_prefix', action='store_true',
                    help='Normalize prefix embeddings (should match training)')
 
