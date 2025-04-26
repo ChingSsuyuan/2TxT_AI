@@ -157,8 +157,6 @@
             const targetLanguage = document.getElementById('targetLanguage');
             const translationContainer = document.getElementById('translationContainer');
             const translatedCaption = document.getElementById('translatedCaption');
-
-            // Click to upload
             browseButton.addEventListener('click', function() {
                 fileInput.click();
             });
@@ -199,7 +197,6 @@
                 }
             }, false);
 
-            // File input change
             fileInput.addEventListener('change', function() {
                 if (this.files.length) {
                     handleFileUpload(this.files[0]);
@@ -218,27 +215,20 @@
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     preview.src = e.target.result;
-                    // Hide upload prompt, show image preview
                     uploadPrompt.style.display = 'none';
                     imagePreviewContainer.style.display = 'block';
                 }
                 reader.readAsDataURL(file);
 
-                // Reset UI
+
                 resultContainer.style.display = 'none';
                 errorMessage.style.display = 'none';
                 translationContainer.style.display = 'none';
-
-                // Upload file
                 uploadFile(file);
             }
             
-            // Clear image and reset UI
             function clearImage() {
-                // Clear file input
                 fileInput.value = '';
-                
-                // Reset UI
                 uploadPrompt.style.display = 'block';
                 imagePreviewContainer.style.display = 'none';
                 resultContainer.style.display = 'none';
@@ -246,7 +236,6 @@
                 translationContainer.style.display = 'none';
             }
             
-            // Event listeners for new buttons
             clearButton.addEventListener('click', clearImage);
             
             uploadAnotherButton.addEventListener('click', function() {
@@ -256,8 +245,6 @@
             function uploadFile(file) {
                 const formData = new FormData();
                 formData.append('file', file);
-
-                // Show loading spinner
                 loading.style.display = 'block';
 
                 fetch('/upload', {
@@ -273,10 +260,8 @@
                     return response.json();
                 })
                 .then(data => {
-                    // Hide loading spinner
                     loading.style.display = 'none';
 
-                    // Show results
                     captionElement.textContent = data.caption;
                     resultContainer.style.display = 'block';
                 })
@@ -291,7 +276,6 @@
                 errorMessage.style.display = 'block';
             }
             
-            // Translation functionality
             translateButton.addEventListener('click', function() {
                 const originalCaption = captionElement.textContent;
                 const language = targetLanguage.value;
