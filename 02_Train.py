@@ -12,6 +12,9 @@ import sys
 import argparse
 import json
 from typing import Tuple, Optional, Union
+"""
+Do not use this file to train the model!
+"""
 
 
 class MappingType(Enum):
@@ -33,15 +36,15 @@ class ClipProDataset(Dataset):
         elif padding < 0:
             tokens = tokens[:self.max_seq_len]
             self.captions_tokens[item] = tokens
-        mask = tokens.ge(0)  # mask is zero where we out of sequence
+        mask = tokens.ge(0) 
         tokens[~mask] = 0
         mask = mask.float()
-        mask = torch.cat((torch.ones(self.prefix_length), mask), dim=0)  # adding prefix mask
+        mask = torch.cat((torch.ones(self.prefix_length), mask), dim=0) 
         return tokens, mask
 
     def __getitem__(self, item: int) -> Tuple[torch.Tensor, ...]:
         tokens, mask = self.pad_tokens(item)
-        prefix = self.prefixes[self.caption2embedding[item]]  # Use mapping from caption to embedding
+        prefix = self.prefixes[self.caption2embedding[item]]  
         if self.normalize_prefix:
             prefix = prefix.float()
             prefix = prefix / prefix.norm(2, -1)
@@ -55,20 +58,15 @@ class ClipProDataset(Dataset):
         
         with open(data_path, 'rb') as f:
             all_data = pickle.load(f)
-        
-        # Handle the structure of CLIP_Pro_train_merged.pkl
         print("Loading CLIP_Pro data...")
         self.prefixes = all_data["clip_embedding"]
-        
-        # Get captions from the structure based on 01_Database_to_Clip.py
         captions_raw = all_data["captions"]
         self.captions = [caption['caption'] for caption in captions_raw]
         
         print(f"Data size is {len(self.prefixes)}")
         print(f"Found {len(self.captions)} captions")
         sys.stdout.flush()
-        
-        # Process captions
+    
         tokens_cache_path = f"{data_path[:-4]}_tokens.pkl"
         
         if os.path.isfile(tokens_cache_path):
@@ -86,7 +84,6 @@ class ClipProDataset(Dataset):
                 self.caption2embedding.append(caption["clip_embedding"])
                 max_seq_len = max(max_seq_len, self.captions_tokens[-1].shape[0])
             
-            # Save tokens to cache
             with open(tokens_cache_path, 'wb') as f:
                 pickle.dump([self.captions_tokens, self.caption2embedding, max_seq_len], f)
             print(f"Tokens cached to {tokens_cache_path}")
@@ -144,9 +141,7 @@ class MultiHeadAttention(nn.Module):
         y = y if y is not None else x
         b, n, c = x.shape
         _, m, d = y.shape
-        # b n h dh
         queries = self.to_queries(x).reshape(b, n, self.num_heads, c // self.num_heads)
-        # b m 2 h dh
         keys_values = self.to_keys_values(y).reshape(b, m, 2, self.num_heads, c // self.num_heads)
         keys, values = keys_values[:, :, 0], keys_values[:, :, 1]
         attention = torch.einsum('bnhd,bmhd->bnmh', queries, keys) * self.scale
@@ -193,11 +188,11 @@ class Transformer(nn.Module):
 
     def forward(self, x, y=None, mask=None):
         for i, layer in enumerate(self.layers):
-            if i % 2 == 0 and self.enc_dec: # cross
+            if i % 2 == 0 and self.enc_dec: 
                 x = layer(x, y)
-            elif self.enc_dec:  # self
+            elif self.enc_dec: 
                 x = layer(x, x, mask)
-            else:  # self or cross
+            else:  
                 x = layer(x, y, mask)
         return x
 
@@ -210,11 +205,11 @@ class Transformer(nn.Module):
             num_layers = num_layers * 2
         layers = []
         for i in range(num_layers):
-            if i % 2 == 0 and enc_dec:  # cross
+            if i % 2 == 0 and enc_dec:  
                 layers.append(TransformerLayer(dim_self, dim_ref, num_heads, mlp_ratio, act=act, norm_layer=norm_layer))
-            elif enc_dec:  # self
+            elif enc_dec:  
                 layers.append(TransformerLayer(dim_self, dim_self, num_heads, mlp_ratio, act=act, norm_layer=norm_layer))
-            else:  # self or cross
+            else: 
                 layers.append(TransformerLayer(dim_self, dim_ref, num_heads, mlp_ratio, act=act, norm_layer=norm_layer))
         self.layers = nn.ModuleList(layers)
 
@@ -280,9 +275,9 @@ class ClipCaptionPrefix(ClipCaptionModel):
 def save_config(args: argparse.Namespace):
     config = {}
     for key, item in args._get_kwargs():
-        # 特殊处理MappingType类型，将其转换为字符串
+       
         if key == 'mapping_type' and isinstance(item, MappingType):
-            config[key] = item.value  # 使用枚举的值（字符串）而不是枚举对象
+            config[key] = item.value  
         else:
             config[key] = item
     out_path = os.path.join(args.out_dir, f"{args.prefix}.json")
@@ -327,7 +322,6 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
     optimizer = AdamW(model.parameters(), lr=lr)
     train_dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     
-    # 创建验证集的DataLoader（如果有验证集）
     val_dataloader = None
     if val_dataset is not None:
         val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
@@ -336,20 +330,16 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=warmup_steps, num_training_steps=epochs * len(train_dataloader)
     )
-    
-    # 记录最佳验证损失，用于保存最佳模型
     best_val_loss = float('inf')
     save_config(args)
     
     for epoch in range(epochs):
         print(f">>> 训练周期 {epoch}")
         sys.stdout.flush()
-        model.train()  # 设置为训练模式
+        model.train()  
         progress = tqdm(total=len(train_dataloader), desc=output_prefix)
         train_loss_sum = 0.0
         train_samples = 0
-        
-        # 训练循环
         for idx, (tokens, mask, prefix) in enumerate(train_dataloader):
             model.zero_grad()
             try:
@@ -361,8 +351,6 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
                 optimizer.step()
                 scheduler.step()
                 optimizer.zero_grad()
-                
-                # 累积训练损失
                 train_loss_sum += loss.item() * tokens.size(0)
                 train_samples += tokens.size(0)
                 
