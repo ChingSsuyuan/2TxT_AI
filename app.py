@@ -1,4 +1,4 @@
-# app.py
+
 """
 This is the main application file for the Image Caption Generator web app.
 It uses Flask to handle HTTP requests and file uploads.
@@ -18,11 +18,9 @@ app = Flask(__name__)
 UPLOAD_FOLDER = 'test_images'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 CAPTION_OUTPUT = 'generated_captions.json'
-MODEL_WEIGHTS = './checkpoints/clip_pro_prefix-best.pt'  # Path to your model weights
+MODEL_WEIGHTS = './checkpoints/clip_pro_prefix-best.pt'  # Path to model 
 CLIP_MODEL = 'RN50x4'  # CLIP model type
 USE_CPU = True  # Set to True to force CPU usage
-
-# Create upload folder if it doesn't exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def allowed_file(filename):
@@ -46,22 +44,14 @@ def upload_file():
         return jsonify({'error': 'No selected file'}), 400
     
     if file and allowed_file(file.filename):
-        # Clear previous images
         for f in os.listdir(UPLOAD_FOLDER):
             file_path = os.path.join(UPLOAD_FOLDER, f)
             if os.path.isfile(file_path):
                 os.unlink(file_path)
-        
-        # Generate a unique filename
         unique_filename = f"{uuid.uuid4().hex}.{file.filename.rsplit('.', 1)[1].lower()}"
         filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
-        
-        # Save the file
         file.save(filepath)
-        
-        # Run the caption generation script
         try:
-            # Use sys.executable to get the correct Python interpreter path
             import sys
             cmd = [
                 sys.executable, '03_predict.py',
@@ -75,12 +65,8 @@ def upload_file():
                 cmd.append('--use_cpu')
                 
             subprocess.run(cmd, check=True)
-            
-            # Read the generated captions
             with open(CAPTION_OUTPUT, 'r', encoding='utf-8') as f:
                 captions = json.load(f)
-            
-            # Get the caption for the uploaded image
             if unique_filename in captions:
                 caption = captions[unique_filename]
             else:
@@ -113,8 +99,6 @@ def translate_text():
         response = requests.get(url)
         if response.status_code != 200:
             return jsonify({'error': 'Translation service error'}), 500
-        
-        # Parse the response
         result = response.json()
         translated_text = ''.join([sentence[0] for sentence in result[0]])
         
