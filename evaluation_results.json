@@ -1,0 +1,77 @@
+{
+    "num_samples": 5,
+    "average_bleu": 0.07929443432966903,
+    "average_meteor": 0.3230729597093475,
+    "results": [
+        {
+            "image_id": 59598,
+            "file_name": "000000059598.jpg",
+            "generated_caption": "A banana, a cup of coffee, and a laptop on a table.",
+            "reference_captions": [
+                "A table topped with a laptop computer next to a plate of food.",
+                "A table with a laptop a plate with a muffin and a banana, a can and a cellphone.",
+                "a laptop on top of a table with a plate with food next to it.",
+                "A soda, banana and muffin are set near a laptop.",
+                "TABLE WITH A PLATE OF FOOD A DRINK, CELL PHONE AND A COMPUTER"
+            ],
+            "bleu_score": 0.03943292883114048,
+            "meteor_score": 0.22408785201686485
+        },
+        {
+            "image_id": 279714,
+            "file_name": "000000279714.jpg",
+            "generated_caption": "A stop sign is on a pole in front of a building.",
+            "reference_captions": [
+                "Closeup of a button in front of the Louisville Slugger factory in KY.",
+                "a car is parked next to a pole ",
+                "A baseball bat is in a window looking out over the street.",
+                "A hand written sign is posted on an object outside",
+                "The picture of a pin has a huge bat in the background beside a building."
+            ],
+            "bleu_score": 0.0487891834642934,
+            "meteor_score": 0.25811917144118635
+        },
+        {
+            "image_id": 294350,
+            "file_name": "000000294350.jpg",
+            "generated_caption": "A man in a black shirt preparing food in a kitchen.",
+            "reference_captions": [
+                "A man preparing food in a restaurant kitchen.",
+                "A cook in the kitchen is making something very good to eat.",
+                "A group of people in a large kitchen.",
+                "A man who is cutting something in a kitchen.",
+                "A man standing in a kitchen preparing food next to other cooks."
+            ],
+            "bleu_score": 0.10764217199800233,
+            "meteor_score": 0.4286567721204074
+        },
+        {
+            "image_id": 493905,
+            "file_name": "000000493905.jpg",
+            "generated_caption": "A woman in white shirt and black shorts playing a game of tennis.",
+            "reference_captions": [
+                "A male Tennis player is trying to secure the ball. ",
+                "A man in white shirt and shorts playing a game of tennis.",
+                "A tennis player is in mid air with his racquet.",
+                "A man jumping up in the air swinging a tennis racket at a ball.",
+                "Man in white outfit swinging a racket at a tennis ball."
+            ],
+            "bleu_score": 0.1363227245463924,
+            "meteor_score": 0.2870446000367359
+        },
+        {
+            "image_id": 263463,
+            "file_name": "000000263463.jpg",
+            "generated_caption": "A dog looking out the window of a car.",
+            "reference_captions": [
+                "A dog hanging out of a back door window.",
+                "A dog is shown in a car rear view mirror.",
+                "A dog sticks his head out of a car window.",
+                "A dog looks out of the window as the car driver goes past a historic town.",
+                "a reflection of a dog looking out a window in a side view mirror "
+            ],
+            "bleu_score": 0.06428516280851651,
+            "meteor_score": 0.417456402931543
+        }
+    ]
+}

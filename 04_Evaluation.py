@@ -1,276 +1,401 @@
 import os
-import json
 import torch
 import clip
 import argparse
 from PIL import Image
 import numpy as np
 from tqdm import tqdm
-from typing import Dict, List
-import subprocess
-import tempfile
+import json
+from transformers import GPT2Tokenizer, GPT2LMHeadModel
+from torch import nn
+import torch.nn.functional as nnf
+from enum import Enum
+from typing import Optional
 
 # Import evaluation metrics
-from nltk.translate.bleu_score import corpus_bleu, sentence_bleu
-from nltk.translate.meteor_score import meteor_score
-from rouge_score import rouge_scorer
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 import nltk
 
-# Download required NLTK data
+# 下载必要的NLTK数据
 nltk.download('wordnet', quiet=True)
 nltk.download('omw-1.4', quiet=True)
 
-# Import your model
-from 03_predict import ClipCaptionModel, MappingType, generate2, generate_beam
-from transformers import GPT2Tokenizer
+# 定义必要的类和函数
+class MappingType(Enum):
+    MLP = 'mlp'
+    Transformer = 'transformer'
 
-class CaptionEvaluator:
-    def __init__(self, model_path, test_dir, reference_captions=None, device='cpu'):
-        """
-        Initialize evaluator
-        Args:
-            model_path: Path to trained model checkpoint
-            test_dir: Directory containing test images
-            reference_captions: Dict of reference captions or path to JSON file
-            device: Device to use (cpu/cuda)
-        """
-        self.device = torch.device(device)
-        self.model_path = model_path
-        self.test_dir = test_dir
-        
-        # Load model and necessary components
-        self.clip_model, self.preprocess = clip.load('RN50x4', device=self.device, jit=False)
-        self.tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
-        
-        # Load caption model
-        mapping_type = MappingType.Transformer  # Match training config
-        self.model = ClipCaptionModel(
-            prefix_length=40,
-            clip_length=40,
-            prefix_size=640,
-            mapping_type=mapping_type
+class MLP(nn.Module):
+    def forward(self, x):
+        return self.model(x)
+
+    def __init__(self, sizes, bias=True, act=nn.Tanh):
+        super(MLP, self).__init__()
+        layers = []
+        for i in range(len(sizes) - 1):
+            layers.append(nn.Linear(sizes[i], sizes[i + 1], bias=bias))
+            if i < len(sizes) - 2:
+                layers.append(act())
+        self.model = nn.Sequential(*layers)
+
+class MlpTransformer(nn.Module):
+    def __init__(self, in_dim, h_dim, out_d: Optional[int] = None, act=nnf.relu, dropout=0.):
+        super().__init__()
+        out_d = out_d if out_d is not None else in_dim
+        self.fc1 = nn.Linear(in_dim, h_dim)
+        self.act = act
+        self.fc2 = nn.Linear(h_dim, out_d)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.act(x)
+        x = self.dropout(x)
+        x = self.fc2(x)
+        x = self.dropout(x)
+        return x
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, dim_self, dim_ref, num_heads, bias=True, dropout=0.):
+        super().__init__()
+        self.num_heads = num_heads
+        head_dim = dim_self // num_heads
+        self.scale = head_dim ** -0.5
+        self.to_queries = nn.Linear(dim_self, dim_self, bias=bias)
+        self.to_keys_values = nn.Linear(dim_ref, dim_self * 2, bias=bias)
+        self.project = nn.Linear(dim_self, dim_self)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, y=None, mask=None):
+        y = y if y is not None else x
+        b, n, c = x.shape
+        _, m, d = y.shape
+        queries = self.to_queries(x).reshape(b, n, self.num_heads, c // self.num_heads)
+        keys_values = self.to_keys_values(y).reshape(b, m, 2, self.num_heads, c // self.num_heads)
+        keys, values = keys_values[:, :, 0], keys_values[:, :, 1]
+        attention = torch.einsum('bnhd,bmhd->bnmh', queries, keys) * self.scale
+        if mask is not None:
+            if mask.dim() == 2:
+                mask = mask.unsqueeze(1)
+            attention = attention.masked_fill(mask.unsqueeze(3), float("-inf"))
+        attention = attention.softmax(dim=2)
+        out = torch.einsum('bnmh,bmhd->bnhd', attention, values).reshape(b, n, c)
+        out = self.project(out)
+        return out, attention
+
+class TransformerLayer(nn.Module):
+    def __init__(self, dim_self, dim_ref, num_heads, mlp_ratio=4., bias=False, dropout=0., act=nnf.relu,
+                 norm_layer: nn.Module = nn.LayerNorm):
+        super().__init__()
+        self.norm1 = norm_layer(dim_self)
+        self.attn = MultiHeadAttention(dim_self, dim_ref, num_heads, bias=bias, dropout=dropout)
+        self.norm2 = norm_layer(dim_self)
+        self.mlp = MlpTransformer(dim_self, int(dim_self * mlp_ratio), act=act, dropout=dropout)
+
+    def forward(self, x, y=None, mask=None):
+        x = x + self.attn(self.norm1(x), y, mask)[0]
+        x = x + self.mlp(self.norm2(x))
+        return x
+
+class Transformer(nn.Module):
+    def __init__(self, dim_self: int, num_heads: int, num_layers: int, dim_ref: Optional[int] = None,
+                 mlp_ratio: float = 2., act=nnf.relu, norm_layer: nn.Module = nn.LayerNorm, enc_dec: bool = False):
+        super(Transformer, self).__init__()
+        dim_ref = dim_ref if dim_ref is not None else dim_self
+        self.enc_dec = enc_dec
+        if enc_dec:
+            num_layers = num_layers * 2
+        layers = []
+        for i in range(num_layers):
+            if i % 2 == 0 and enc_dec:  
+                layers.append(TransformerLayer(dim_self, dim_ref, num_heads, mlp_ratio, act=act, norm_layer=norm_layer))
+            elif enc_dec:  
+                layers.append(TransformerLayer(dim_self, dim_self, num_heads, mlp_ratio, act=act, norm_layer=norm_layer))
+            else:  
+                layers.append(TransformerLayer(dim_self, dim_ref, num_heads, mlp_ratio, act=act, norm_layer=norm_layer))
+        self.layers = nn.ModuleList(layers)
+
+    def forward(self, x, y=None, mask=None):
+        for i, layer in enumerate(self.layers):
+            if i % 2 == 0 and self.enc_dec:
+                x = layer(x, y)
+            elif self.enc_dec:  
+                x = layer(x, x, mask)
+            else:  
+                x = layer(x, y, mask)
+        return x
+
+class TransformerMapper(nn.Module):
+    def __init__(self, dim_clip: int, dim_embedding: int, prefix_length: int, clip_length: int, num_layers: int = 8):
+        super(TransformerMapper, self).__init__()
+        self.clip_length = clip_length
+        self.transformer = Transformer(dim_embedding, 8, num_layers)
+        self.linear = nn.Linear(dim_clip, clip_length * dim_embedding)
+        self.prefix_const = nn.Parameter(torch.randn(prefix_length, dim_embedding), requires_grad=True)
+
+    def forward(self, x):
+        x = self.linear(x).view(x.shape[0], self.clip_length, -1)
+        prefix = self.prefix_const.unsqueeze(0).expand(x.shape[0], *self.prefix_const.shape)
+        prefix = torch.cat((x, prefix), dim=1)
+        out = self.transformer(prefix)[:, self.clip_length:]
+        return out
+
+class ClipCaptionModel(nn.Module):
+    def get_dummy_token(self, batch_size: int, device):
+        return torch.zeros(
+            batch_size, self.prefix_length, dtype=torch.int64, device=device
         )
-        self.model.load_state_dict(torch.load(model_path, map_location=self.device), strict=False)
-        self.model.eval()
-        self.model.to(self.device)
-        
-        # Load or create reference captions
-        if isinstance(reference_captions, str) and os.path.exists(reference_captions):
-            with open(reference_captions, 'r') as f:
-                self.reference_captions = json.load(f)
-        elif isinstance(reference_captions, dict):
-            self.reference_captions = reference_captions
+
+    def forward(self, tokens, prefix, mask=None, labels=None):
+        embedding_text = self.gpt.transformer.wte(tokens)
+        prefix_projections = self.clip_project(prefix).view(
+            -1, self.prefix_length, self.gpt_embedding_size
+        )
+        embedding_cat = torch.cat((prefix_projections, embedding_text), dim=1)
+        if labels is not None:
+            dummy_token = self.get_dummy_token(tokens.shape[0], tokens.device)
+            labels = torch.cat((dummy_token, tokens), dim=1)
+        out = self.gpt(inputs_embeds=embedding_cat, labels=labels, attention_mask=mask)
+        return out
+
+    def __init__(self, prefix_length: int, clip_length: Optional[int] = None, 
+                prefix_size: int = 640, num_layers: int = 8, 
+                mapping_type: MappingType = MappingType.MLP):
+        super(ClipCaptionModel, self).__init__()
+        self.prefix_length = prefix_length
+        self.gpt = GPT2LMHeadModel.from_pretrained("gpt2")
+        self.gpt_embedding_size = self.gpt.transformer.wte.weight.shape[1]
+        if mapping_type == MappingType.MLP:
+            self.clip_project = MLP(
+                (prefix_size, (self.gpt_embedding_size * prefix_length) // 2, 
+                self.gpt_embedding_size * prefix_length)
+            )
         else:
-            print("Warning: No reference captions provided. Evaluation will be limited.")
-            self.reference_captions = {}
+            if clip_length is None:
+                clip_length = 10
+            self.clip_project = TransformerMapper(
+                prefix_size, self.gpt_embedding_size, prefix_length,
+                clip_length, num_layers
+            )
+
+def generate2(model, tokenizer, tokens=None, prompt=None, embed=None, entry_count=1,
+             entry_length=30, top_p=0.8, temperature=1.0, stop_token: str = "."):
+    model.eval()
+    generated_list = []
+    stop_token_index = tokenizer.encode(stop_token)[0]
+    filter_value = -float("Inf")
+    device = next(model.parameters()).device
+
+    with torch.no_grad():
+        for entry_idx in range(entry_count):
+            if embed is not None:
+                generated = embed
+            else:
+                if tokens is None:
+                    tokens = torch.tensor(tokenizer.encode(prompt))
+                    tokens = tokens.unsqueeze(0).to(device)
+                generated = model.gpt.transformer.wte(tokens)
+
+            for i in range(entry_length):
+                outputs = model.gpt(inputs_embeds=generated)
+                logits = outputs.logits
+                logits = logits[:, -1, :] / (temperature if temperature > 0 else 1.0)
+                sorted_logits, sorted_indices = torch.sort(logits, descending=True)
+                cumulative_probs = torch.cumsum(
+                    nnf.softmax(sorted_logits, dim=-1), dim=-1
+                )
+                sorted_indices_to_remove = cumulative_probs > top_p
+                sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[
+                    ..., :-1
+                ].clone()
+                sorted_indices_to_remove[..., 0] = 0
+
+                indices_to_remove = sorted_indices[sorted_indices_to_remove]
+                logits[:, indices_to_remove] = filter_value
+                next_token = torch.argmax(logits, -1).unsqueeze(0)
+                next_token_embed = model.gpt.transformer.wte(next_token)
+                if tokens is None:
+                    tokens = next_token
+                else:
+                    tokens = torch.cat((tokens, next_token), dim=1)
+                generated = torch.cat((generated, next_token_embed), dim=1)
+                if stop_token_index == next_token.item():
+                    break
+
+            output_list = list(tokens.squeeze().cpu().numpy())
+            output_text = tokenizer.decode(output_list)
+            generated_list.append(output_text)
+
+    return generated_list[0]
+
+def evaluate_test_set(model_path, test_dir, device='cpu'):
+    """评估测试集上的模型表现"""
     
-    def generate_caption(self, image_path, use_beam_search=True, beam_size=5, 
-                        temperature=1.0, entry_length=30):
-        """Generate caption for a single image"""
-        image = Image.open(image_path).convert("RGB")
-        image_input = self.preprocess(image).unsqueeze(0).to(self.device)
+    # 加载模型
+    print("加载模型...")
+    device = torch.device(device)
+    clip_model, preprocess = clip.load('RN50x4', device=device, jit=False)
+    tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+    
+    # 加载CLIP Caption模型
+    mapping_type = MappingType.Transformer
+    model = ClipCaptionModel(
+        prefix_length=40,
+        clip_length=40,
+        prefix_size=640,
+        mapping_type=mapping_type
+    )
+    model.load_state_dict(torch.load(model_path, map_location=device), strict=False)
+    model.eval()
+    model.to(device)
+    
+    # 获取测试图片
+    test_images = []
+    for ext in ['*.jpg', '*.jpeg', '*.png']:
+        test_images.extend([f for f in os.listdir(test_dir) if f.lower().endswith(ext[1:])])
+    
+    print(f"找到 {len(test_images)} 张测试图片")
+    
+    # 生成标题
+    generated_captions = []
+    
+    for img_file in tqdm(test_images, desc="生成标题"):
+        img_path = os.path.join(test_dir, img_file)
+        
+        # 加载并预处理图片
+        image = Image.open(img_path).convert("RGB")
+        image_input = preprocess(image).unsqueeze(0).to(device)
         
         with torch.no_grad():
-            prefix = self.clip_model.encode_image(image_input).to(self.device, dtype=torch.float32)
-            prefix_embed = self.model.clip_project(prefix).reshape(1, 40, -1)
+            prefix = clip_model.encode_image(image_input).to(device, dtype=torch.float32)
+            prefix_embed = model.clip_project(prefix).reshape(1, 40, -1)
         
-        if use_beam_search:
-            generated_text = generate_beam(
-                self.model, self.tokenizer,
+        # 生成标题
+        caption = generate2(
+            model, tokenizer,
+            embed=prefix_embed,
+            entry_length=30,
+            temperature=1.0
+        )
+        
+        generated_captions.append({
+            'image': img_file,
+            'caption': caption
+        })
+    
+    # 计算评估指标
+    print("\n评估指标:")
+    print("-" * 30)
+    
+    # 1. 平均标题长度
+    avg_length = np.mean([len(item['caption'].split()) for item in generated_captions])
+    print(f"平均标题长度: {avg_length:.2f} 词")
+    
+    # 2. 词汇多样性
+    all_words = []
+    for item in generated_captions:
+        all_words.extend(item['caption'].lower().split())
+    vocab_diversity = len(set(all_words)) / len(all_words)
+    print(f"词汇多样性: {vocab_diversity:.3f}")
+    
+    # 3. 生成一致性
+    consistency_scores = []
+    
+    print("\n计算生成一致性...")
+    for i in range(min(10, len(test_images))):  
+        img_path = os.path.join(test_dir, test_images[i])
+        image = Image.open(img_path).convert("RGB")
+        image_input = preprocess(image).unsqueeze(0).to(device)
+        
+        captions = []
+        for _ in range(3):  
+            with torch.no_grad():
+                prefix = clip_model.encode_image(image_input).to(device, dtype=torch.float32)
+                prefix_embed = model.clip_project(prefix).reshape(1, 40, -1)
+            
+            caption = generate2(
+                model, tokenizer,
                 embed=prefix_embed,
-                beam_size=beam_size,
-                entry_length=entry_length,
-                temperature=temperature
-            )[0]
-        else:
-            generated_text = generate2(
-                self.model, self.tokenizer,
-                embed=prefix_embed,
-                entry_length=entry_length,
-                temperature=temperature
+                entry_length=30,
+                temperature=1.0
             )
+            captions.append(caption)
         
-        return generated_text
+        # 计算BLEU分数作为一致性度量
+        smoothing = SmoothingFunction().method1
+        scores = []
+        for i in range(len(captions)):
+            for j in range(i+1, len(captions)):
+                score = sentence_bleu([captions[i].split()], captions[j].split(), smoothing_function=smoothing)
+                scores.append(score)
+        
+        if scores:
+            consistency_scores.append(np.mean(scores))
     
-    def evaluate_bleu(self, candidates: List[str], references: List[List[str]]) -> Dict:
-        """Calculate BLEU scores"""
-        # Tokenize candidates and references
-        candidate_tokens = [caption.split() for caption in candidates]
-        reference_tokens = [[ref.split() for ref in refs] for refs in references]
-        
-        # Calculate BLEU scores (1-4)
-        bleu_scores = {}
-        for i in range(1, 5):
-            weights = [1.0/i] * i + [0.0] * (4-i)
-            bleu_scores[f'BLEU-{i}'] = corpus_bleu(reference_tokens, candidate_tokens, weights=weights)
-        
-        return bleu_scores
+    avg_consistency = np.mean(consistency_scores) if consistency_scores else 0
+    print(f"生成一致性: {avg_consistency:.3f}")
     
-    def evaluate_meteor(self, candidates: List[str], references: List[List[str]]) -> float:
-        """Calculate METEOR score"""
-        meteor_scores = []
-        for cand, refs in zip(candidates, references):
-            # METEOR expects single reference, so we take the average
-            score = np.mean([meteor_score([ref], cand) for ref in refs])
-            meteor_scores.append(score)
-        
-        return np.mean(meteor_scores)
+    # 4. 语法完整性
+    proper_endings = sum(1 for item in generated_captions if item['caption'].strip().endswith('.'))
+    grammar_score = proper_endings / len(generated_captions)
+    print(f"语法完整性: {grammar_score:.3f}")
     
-    def evaluate_rouge(self, candidates: List[str], references: List[List[str]]) -> Dict:
-        """Calculate ROUGE scores"""
-        scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
-        rouge_scores = {'rouge1': [], 'rouge2': [], 'rougeL': []}
-        
-        for cand, refs in zip(candidates, references):
-            # Get best score among references
-            best_scores = {'rouge1': 0, 'rouge2': 0, 'rougeL': 0}
-            for ref in refs:
-                scores = scorer.score(ref, cand)
-                for metric in best_scores:
-                    best_scores[metric] = max(best_scores[metric], scores[metric].fmeasure)
-            
-            for metric in rouge_scores:
-                rouge_scores[metric].append(best_scores[metric])
-        
-        # Average scores
-        return {metric: np.mean(scores) for metric, scores in rouge_scores.items()}
+    # 5. 长度适当性
+    appropriate_length = sum(1 for item in generated_captions 
+                           if 5 <= len(item['caption'].split()) <= 20)
+    length_score = appropriate_length / len(generated_captions)
+    print(f"长度适当性: {length_score:.3f}")
     
-    def evaluate_cider(self, candidates: Dict[str, str], references: Dict[str, List[str]]) -> float:
-        """Calculate CIDEr score using external script"""
-        # Save temporary files for evaluation
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f_res:
-            json.dump([{'image_id': img_id, 'caption': caption} 
-                      for img_id, caption in candidates.items()], f_res)
-            res_file = f_res.name
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f_ann:
-            anns = []
-            for img_id, refs in references.items():
-                for i, ref in enumerate(refs):
-                    anns.append({'image_id': img_id, 'id': i, 'caption': ref})
-            json.dump(anns, f_ann)
-            ann_file = f_ann.name
-        
-        # Try to use pycocoevalcap if available
-        try:
-            from pycocoevalcap.cider.cider import Cider
-            from pycocoevalcap.eval import COCOEvalCap
-            from pycocotools.coco import COCO
-            
-            coco = COCO(ann_file)
-            coco_res = coco.loadRes(res_file)
-            coco_eval = COCOEvalCap(coco, coco_res)
-            coco_eval.params['image_id'] = list(candidates.keys())
-            coco_eval.evaluate()
-            
-            cider_score = coco_eval.eval['CIDEr']
-        except ImportError:
-            print("Warning: CIDEr computation requires pycocoevalcap package")
-            cider_score = 0.0
-        
-        # Clean up temporary files
-        os.unlink(res_file)
-        os.unlink(ann_file)
-        
-        return cider_score
+    # 保存结果
+    results = {
+        'metrics': {
+            '平均标题长度': avg_length,
+            '词汇多样性': vocab_diversity,
+            '生成一致性': avg_consistency,
+            '语法完整性': grammar_score,
+            '长度适当性': length_score
+        },
+        'generated_captions': generated_captions
+    }
     
-    def evaluate_all(self, use_beam_search=True, beam_size=5, temperature=1.0, entry_length=30):
-        """Run complete evaluation on test set"""
-        # Get all test images
-        test_images = []
-        for ext in ['*.jpg', '*.jpeg', '*.png']:
-            test_images.extend([f for f in os.listdir(self.test_dir) if f.lower().endswith(ext[1:])])
-        
-        print(f"Found {len(test_images)} test images")
-        
-        # Generate captions for all images
-        generated_captions = {}
-        candidates = []
-        references = []
-        
-        for img_file in tqdm(test_images, desc="Generating captions"):
-            img_path = os.path.join(self.test_dir, img_file)
-            caption = self.generate_caption(
-                img_path, 
-                use_beam_search=use_beam_search,
-                beam_size=beam_size,
-                temperature=temperature,
-                entry_length=entry_length
-            )
-            
-            generated_captions[img_file] = caption
-            candidates.append(caption)
-            
-            # Get reference captions if available
-            if img_file in self.reference_captions:
-                refs = self.reference_captions[img_file]
-                if isinstance(refs, str):
-                    refs = [refs]
-                references.append(refs)
-        
-        # Calculate metrics
-        results = {}
-        
-        if references:
-            # BLEU scores
-            bleu_scores = self.evaluate_bleu(candidates, references)
-            results.update(bleu_scores)
-            
-            # METEOR score
-            results['METEOR'] = self.evaluate_meteor(candidates, references)
-            
-            # ROUGE scores
-            rouge_scores = self.evaluate_rouge(candidates, references)
-            results.update(rouge_scores)
-            
-            # CIDEr score
-            if self.reference_captions:
-                results['CIDEr'] = self.evaluate_cider(generated_captions, self.reference_captions)
-        
-        # Save generated captions
-        output_file = 'test_evaluation_results.json'
-        with open(output_file, 'w') as f:
-            json.dump({
-                'metrics': results,
-                'generated_captions': generated_captions
-            }, f, indent=4)
-        
-        print("\nEvaluation Results:")
-        print("-" * 30)
-        for metric, score in results.items():
-            print(f"{metric}: {score:.4f}")
-        
-        return results, generated_captions
+    # 计算综合得分
+    overall_score = (vocab_diversity + avg_consistency + grammar_score + length_score) / 4
+    results['metrics']['综合得分'] = overall_score
+    
+    # 保存到文件
+    output_file = 'test_evaluation_results.json'
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(results, f, ensure_ascii=False, indent=4)
+    
+    print(f"\n综合得分: {overall_score:.3f}")
+    print(f"评估结果已保存到: {output_file}")
+    
+    # 输出示例标题
+    print("\n示例生成的标题:")
+    print("-" * 50)
+    for i in range(min(5, len(generated_captions))):
+        print(f"图片: {generated_captions[i]['image']}")
+        print(f"标题: {generated_captions[i]['caption']}")
+        print("-" * 50)
+    
+    return results
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Evaluate image captioning model on test set')
-    parser.add_argument('--model_path', type=str, required=True, help='Path to model checkpoint')
-    parser.add_argument('--test_dir', type=str, required=True, help='Directory containing test images')
-    parser.add_argument('--reference_captions', type=str, help='Path to JSON file with reference captions')
-    parser.add_argument('--use_beam_search', action='store_true', help='Use beam search for generation')
-    parser.add_argument('--beam_size', type=int, default=5, help='Beam size for beam search')
-    parser.add_argument('--temperature', type=float, default=1.0, help='Temperature for sampling')
-    parser.add_argument('--entry_length', type=int, default=30, help='Maximum caption length')
-    parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
+    parser = argparse.ArgumentParser(description='评估图像标题生成模型')
+    parser.add_argument('--model_path', type=str, 
+                       default='./checkpoints/clip_pro_prefix-best.pt',
+                       help='模型权重路径')
+    parser.add_argument('--test_dir', type=str, 
+                       default='./Test_Set',
+                       help='测试图片目录')
+    parser.add_argument('--device', type=str, 
+                       default='cuda' if torch.cuda.is_available() else 'cpu',
+                       help='使用的设备 (cpu/cuda)')
     
     args = parser.parse_args()
     
-    evaluator = CaptionEvaluator(
-        model_path=args.model_path,
-        test_dir=args.test_dir,
-        reference_captions=args.reference_captions,
-        device=args.device
-    )
-    
-    results, captions = evaluator.evaluate_all(
-        use_beam_search=args.use_beam_search,
-        beam_size=args.beam_size,
-        temperature=args.temperature,
-        entry_length=args.entry_length
-    )
-    
-    print(f"\nResults saved to test_evaluation_results.json")
+    results = evaluate_test_set(args.model_path, args.test_dir, args.device)
 
 
 if __name__ == "__main__":
