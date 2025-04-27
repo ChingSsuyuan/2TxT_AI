@@ -1,0 +1,28 @@
+{
+    "metrics": {
+        "平均标题长度": 10.25,
+        "词汇多样性": 0.6585365853658537,
+        "生成一致性": 1.0,
+        "语法完整性": 1.0,
+        "长度适当性": 1.0,
+        "综合得分": 0.9146341463414634
+    },
+    "generated_captions": [
+        {
+            "image": "1B.jpg",
+            "caption": "A street scene with a stop sign and a bicycle path sign."
+        },
+        {
+            "image": "B4.jpg",
+            "caption": "A table topped with a tray of food and a hot dog."
+        },
+        {
+            "image": "B3.jpg",
+            "caption": "A cup of coffee sits on a wooden table."
+        },
+        {
+            "image": "B2.jpg",
+            "caption": "A bicycle is parked on a city street."
+        }
+    ]
+}
