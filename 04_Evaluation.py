@@ -280,11 +280,9 @@ def evaluate_test_set(model_path, test_dir, device='cpu'):
         all_words.extend(item['caption'].lower().split())
     vocab_diversity = len(set(all_words)) / len(all_words)
     print(f"Lexical diversity: {vocab_diversity:.3f}")
-    
-    # 3. 生成一致性
+
     consistency_scores = []
-    
-    print("\n计算生成一致性...")
+    print("\n Calculating generation consistency...")
     for i in range(min(10, len(test_images))):  
         img_path = os.path.join(test_dir, test_images[i])
         image = Image.open(img_path).convert("RGB")
@@ -303,8 +301,6 @@ def evaluate_test_set(model_path, test_dir, device='cpu'):
                 temperature=1.0
             )
             captions.append(caption)
-        
-        # 计算BLEU分数作为一致性度量
         smoothing = SmoothingFunction().method1
         scores = []
         for i in range(len(captions)):
@@ -316,20 +312,15 @@ def evaluate_test_set(model_path, test_dir, device='cpu'):
             consistency_scores.append(np.mean(scores))
     
     avg_consistency = np.mean(consistency_scores) if consistency_scores else 0
-    print(f"生成一致性: {avg_consistency:.3f}")
+    print(f"Generating consistency: {avg_consistency:.3f}")
     
-    # 4. 语法完整性
     proper_endings = sum(1 for item in generated_captions if item['caption'].strip().endswith('.'))
     grammar_score = proper_endings / len(generated_captions)
-    print(f"语法完整性: {grammar_score:.3f}")
-    
-    # 5. 长度适当性
+    print(f"Grammatical integrity: {grammar_score:.3f}")
     appropriate_length = sum(1 for item in generated_captions 
                            if 5 <= len(item['caption'].split()) <= 20)
     length_score = appropriate_length / len(generated_captions)
-    print(f"长度适当性: {length_score:.3f}")
-    
-    # 保存结果
+    print(f"Appropriateness of length: {length_score:.3f}")
     results = {
         'metrics': {
             '平均标题长度': avg_length,
