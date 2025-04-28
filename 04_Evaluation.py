@@ -257,8 +257,6 @@ def evaluate_test_set(model_path, test_dir, device='cpu'):
         with torch.no_grad():
             prefix = clip_model.encode_image(image_input).to(device, dtype=torch.float32)
             prefix_embed = model.clip_project(prefix).reshape(1, 40, -1)
-        
-        # 生成标题
         caption = generate2(
             model, tokenizer,
             embed=prefix_embed,
@@ -271,20 +269,17 @@ def evaluate_test_set(model_path, test_dir, device='cpu'):
             'caption': caption
         })
     
-    # 计算评估指标
-    print("\n评估指标:")
+    print("\n Assessment of indicators:")
     print("-" * 30)
     
-    # 1. 平均标题长度
     avg_length = np.mean([len(item['caption'].split()) for item in generated_captions])
-    print(f"平均标题长度: {avg_length:.2f} 词")
+    print(f"Average caption length: {avg_length:.2f} words")
     
-    # 2. 词汇多样性
     all_words = []
     for item in generated_captions:
         all_words.extend(item['caption'].lower().split())
     vocab_diversity = len(set(all_words)) / len(all_words)
-    print(f"词汇多样性: {vocab_diversity:.3f}")
+    print(f"Lexical diversity: {vocab_diversity:.3f}")
     
     # 3. 生成一致性
     consistency_scores = []
