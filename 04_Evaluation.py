@@ -351,21 +351,20 @@ def evaluate_test_set(model_path, test_dir, device='cpu'):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='评估图像标题生成模型')
+    parser = argparse.ArgumentParser(description='Evaluating image caption generation models')
     parser.add_argument('--model_path', type=str, 
                        default='./checkpoints/clip_pro_prefix-best.pt',
-                       help='模型权重路径')
+                       help='model path')
     parser.add_argument('--test_dir', type=str, 
                        default='./Test_Set',
-                       help='测试图片目录')
+                       help='Test image file path')
     parser.add_argument('--device', type=str, 
                        default='cuda' if torch.cuda.is_available() else 'cpu',
-                       help='使用的设备 (cpu/cuda)')
+                       help='Use device (cpu/cuda)')
     
     args = parser.parse_args()
     
     results = evaluate_test_set(args.model_path, args.test_dir, args.device)
-
 
 if __name__ == "__main__":
     main()
