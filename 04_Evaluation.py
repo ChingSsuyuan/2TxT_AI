@@ -340,12 +340,11 @@ def evaluate_test_set(model_path, test_dir, device='cpu'):
     print(f"\nAggregate score: {overall_score:.3f}")
     print(f"Save to: {output_file}")
     
-    # 输出示例标题
-    print("\n示例生成的标题:")
+    print("\nExample generated caption:")
     print("-" * 50)
     for i in range(min(5, len(generated_captions))):
-        print(f"图片: {generated_captions[i]['image']}")
-        print(f"标题: {generated_captions[i]['caption']}")
+        print(f"Image: {generated_captions[i]['image']}")
+        print(f"Caption: {generated_captions[i]['caption']}")
         print("-" * 50)
     
     return results
