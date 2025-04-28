@@ -323,26 +323,22 @@ def evaluate_test_set(model_path, test_dir, device='cpu'):
     print(f"Appropriateness of length: {length_score:.3f}")
     results = {
         'metrics': {
-            '平均标题长度': avg_length,
-            '词汇多样性': vocab_diversity,
-            '生成一致性': avg_consistency,
-            '语法完整性': grammar_score,
-            '长度适当性': length_score
+            'Average caption length': avg_length,
+            'Lexical diversity': vocab_diversity,
+            'Generating consistency': avg_consistency,
+            'Grammatical integrity': grammar_score,
+            'Appropriateness of length': length_score
         },
         'generated_captions': generated_captions
     }
-    
-    # 计算综合得分
     overall_score = (vocab_diversity + avg_consistency + grammar_score + length_score) / 4
-    results['metrics']['综合得分'] = overall_score
-    
-    # 保存到文件
+    results['metrics']['Aggregate score'] = overall_score
     output_file = 'test_evaluation_results.json'
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
     
-    print(f"\n综合得分: {overall_score:.3f}")
-    print(f"评估结果已保存到: {output_file}")
+    print(f"\nAggregate score: {overall_score:.3f}")
+    print(f"Save to: {output_file}")
     
     # 输出示例标题
     print("\n示例生成的标题:")
