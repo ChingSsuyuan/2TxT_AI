@@ -11,16 +11,11 @@ from torch import nn
 import torch.nn.functional as nnf
 from enum import Enum
 from typing import Optional
-
-# Import evaluation metrics
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 import nltk
-
-# 下载必要的NLTK数据
 nltk.download('wordnet', quiet=True)
 nltk.download('omw-1.4', quiet=True)
 
-# 定义必要的类和函数
 class MappingType(Enum):
     MLP = 'mlp'
     Transformer = 'transformer'
@@ -229,15 +224,13 @@ def generate2(model, tokenizer, tokens=None, prompt=None, embed=None, entry_coun
     return generated_list[0]
 
 def evaluate_test_set(model_path, test_dir, device='cpu'):
-    """评估测试集上的模型表现"""
+    """Evaluating model performance on test sets"""
     
-    # 加载模型
-    print("加载模型...")
+    print("Loading...")
     device = torch.device(device)
     clip_model, preprocess = clip.load('RN50x4', device=device, jit=False)
     tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
     
-    # 加载CLIP Caption模型
     mapping_type = MappingType.Transformer
     model = ClipCaptionModel(
         prefix_length=40,
@@ -249,20 +242,15 @@ def evaluate_test_set(model_path, test_dir, device='cpu'):
     model.eval()
     model.to(device)
     
-    # 获取测试图片
     test_images = []
     for ext in ['*.jpg', '*.jpeg', '*.png']:
         test_images.extend([f for f in os.listdir(test_dir) if f.lower().endswith(ext[1:])])
     
-    print(f"找到 {len(test_images)} 张测试图片")
-    
-    # 生成标题
+    print(f"Find {len(test_images)} images")
     generated_captions = []
     
-    for img_file in tqdm(test_images, desc="生成标题"):
+    for img_file in tqdm(test_images, desc="Generated captions:"):
         img_path = os.path.join(test_dir, img_file)
-        
-        # 加载并预处理图片
         image = Image.open(img_path).convert("RGB")
         image_input = preprocess(image).unsqueeze(0).to(device)
         
