@@ -6,18 +6,19 @@ from PIL import Image
 import numpy as np
 from tqdm import tqdm
 import json
+import requests
+import random
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 from torch import nn
 import torch.nn.functional as nnf
 from enum import Enum
 from typing import Optional, List, Dict
-from nltk.translate.bleu_score import sentence_bleu, corpus_bleu, SmoothingFunction
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 import nltk
+from collections import defaultdict
 nltk.download('wordnet', quiet=True)
 nltk.download('omw-1.4', quiet=True)
-from nltk.tokenize import word_tokenize
-from collections import Counter
-import math
+nltk.download('punkt', quiet=True)
 
 class MappingType(Enum):
     MLP = 'mlp'
@@ -226,7 +227,6 @@ def generate2(model, tokenizer, tokens=None, prompt=None, embed=None, entry_coun
 
     return generated_list[0]
 
-
 # CIDEr Score Implementation
 def calculate_cider(candidate, references, n=4):
     """
@@ -240,9 +240,8 @@ def calculate_cider(candidate, references, n=4):
     Returns:
         CIDEr score
     """
-    # Process candidate and references
-    candidate = [c.lower() for c in candidate]
-    references = [[r.lower() for r in ref] for ref in references]
+    from collections import Counter
+    import math
     
     def compute_tf(tokens, n):
         """Compute term frequency for a list of tokens"""
@@ -269,17 +268,21 @@ def calculate_cider(candidate, references, n=4):
         return doc_freq
     cand_tfs = compute_tf(candidate, n)
     doc_freq = compute_doc_freq(references, n)
+    
+    # Compute IDF weights
     num_refs = len(references)
     ref_len_avg = sum(len(ref) for ref in references) / num_refs
     
     cider_scores = []
     for k in range(1, n+1):
+        # Compute TF-IDF for candidate
         tfidf_cand = {}
         for g, tf in cand_tfs.items():
             if len(g) == k:
                 df = doc_freq.get(g, 0)
                 tfidf_cand[g] = tf * math.log(num_refs / (1.0 + df))
         
+        # Compute TF-IDF for references
         tfidf_refs = []
         for ref in references:
             ref_tfs = compute_tf(ref, n)
@@ -289,15 +292,22 @@ def calculate_cider(candidate, references, n=4):
                     df = doc_freq.get(g, 0)
                     tfidf_ref[g] = tf * math.log(num_refs / (1.0 + df))
             tfidf_refs.append(tfidf_ref)
+        
+        # Compute cosine similarity
         cider_k = 0.0
         for ref_tfidf in tfidf_refs:
+            # Compute numerator
             numerator = 0.0
             for g, w in tfidf_cand.items():
                 if len(g) == k and g in ref_tfidf:
                     numerator += w * ref_tfidf[g]
             
+            # Compute norm for candidate
             norm_cand = math.sqrt(sum(w * w for g, w in tfidf_cand.items() if len(g) == k))
+            # Compute norm for reference
             norm_ref = math.sqrt(sum(w * w for g, w in ref_tfidf.items() if len(g) == k))
+            
+            # Compute similarity
             if norm_cand > 0 and norm_ref > 0:
                 cider_k += numerator / (norm_cand * norm_ref)
         
@@ -307,13 +317,158 @@ def calculate_cider(candidate, references, n=4):
             cider_k = 0.0
         
         cider_scores.append(cider_k)
+    
+    # Average over k
     return sum(cider_scores) / len(cider_scores)
 
-
-def evaluate_test_set(model_path, test_dir, ground_truth_path=None, device='cpu'):
-    """Evaluating model performance on test sets using BLEU and CIDEr scores"""
+def load_coco_captions(captions_file):
+    """
+    Load COCO captions from json file and organize them by image_id
     
-    print("Loading...")
+    Args:
+        captions_file: path to the captions json file (e.g., captions_val2017.json)
+        
+    Returns:
+        A dictionary mapping from image_id to a list of captions for that image
+        A dictionary mapping from filename to image_id
+    """
+    with open(captions_file, 'r', encoding='utf-8') as f:
+        captions_data = json.load(f)
+    
+    # Map from image_id to captions
+    captions_by_image_id = defaultdict(list)
+    for annotation in captions_data['annotations']:
+        image_id = annotation['image_id']
+        caption = annotation['caption']
+        captions_by_image_id[image_id].append(caption)
+    
+    # Map from filename to image_id
+    filename_to_image_id = {}
+    for image in captions_data['images']:
+        filename_to_image_id[image['file_name']] = image['id']
+        # Also map from zeroed filename format (used in some COCO downloads)
+        filename_to_image_id[f"{int(image['id']):012d}.jpg"] = image['id']
+    
+    # Create reverse mapping
+    image_id_to_filename = {v: k for k, v in filename_to_image_id.items()}
+    
+    return captions_by_image_id, filename_to_image_id, image_id_to_filename
+
+def download_coco_images(annotation_file, output_dir, max_images=5):
+    """
+    Download COCO images based on the annotation file
+    
+    Args:
+        annotation_file: Path to the COCO annotations JSON file
+        output_dir: Directory to save downloaded images
+        max_images: Maximum number of images to download (default: 5)
+    
+    Returns:
+        List of successfully downloaded image filenames
+    """
+    print(f"Loading: {annotation_file}")
+    
+    with open(annotation_file, 'r') as f:
+        data = json.load(f)
+    
+    # Load captions and create mapping
+    captions_by_image_id, _, image_id_to_filename = load_coco_captions(annotation_file)
+    
+    # Find image IDs with exactly 5 captions
+    image_ids_with_5_captions = [
+        img_id for img_id, captions in captions_by_image_id.items() 
+        if len(captions) == 5 and img_id in image_id_to_filename
+    ]
+    
+    print(f"Found {len(image_ids_with_5_captions)} images with exactly 5 captions")
+    
+    # Select random subset if we have more than needed
+    if max_images < len(image_ids_with_5_captions):
+        selected_image_ids = random.sample(image_ids_with_5_captions, max_images)
+    else:
+        selected_image_ids = image_ids_with_5_captions[:max_images]
+    
+    print(f"Selected {len(selected_image_ids)} images for download")
+    
+    # Get image info for selected IDs
+    images_info = []
+    for img_id in selected_image_ids:
+        # Find corresponding image info
+        for img_info in data['images']:
+            if img_info['id'] == img_id:
+                images_info.append(img_info)
+                break
+    
+    os.makedirs(output_dir, exist_ok=True)
+    success_count = 0
+    failed_count = 0
+    downloaded_files = []
+    
+    for img_info in tqdm(images_info, desc=f"Downloading images"):
+        img_id = img_info['id']
+        file_name = f"{int(img_id):012d}.jpg"
+        output_path = os.path.join(output_dir, file_name)
+        
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+            print(f"Image already exists: {output_path}")
+            downloaded_files.append(file_name)
+            success_count += 1
+            continue
+        
+        urls = [
+            f"http://images.cocodataset.org/val2017/{file_name}",
+            f"http://images.cocodataset.org/train2017/{file_name}",
+            img_info.get('coco_url', '')
+        ]
+        
+        download_success = False
+        for url in urls:
+            if not url:  # Skip empty URLs
+                continue
+                
+            try:
+                print(f"Downloading {url}")
+                response = requests.get(url, stream=True, timeout=30)
+                
+                if response.status_code == 200:
+                    with open(output_path, 'wb') as file:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            if chunk:
+                                file.write(chunk)
+                    
+                    if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                        print(f"Successfully downloaded the image to: {output_path}")
+                        downloaded_files.append(file_name)
+                        download_success = True
+                        break
+                    else:
+                        print(f"Invalid downloaded file: {output_path}")
+            except Exception as e:
+                print(f"Failed to download {url}: {str(e)}")
+        
+        if download_success:
+            success_count += 1
+        else:
+            failed_count += 1
+            print(f"All URL attempts failed for image ID: {img_id}")
+    
+    print(f"Download complete! Success: {success_count}, Failure: {failed_count}")
+    return downloaded_files
+
+def evaluate_test_set(model_path, test_dir, captions_file=None, device='cpu', download_images=True, num_images=5):
+    """
+    Evaluating model performance on test sets using BLEU and CIDEr scores
+    
+    Args:
+        model_path: Path to the trained model
+        test_dir: Directory containing test images
+        captions_file: Path to COCO captions JSON file
+        device: Device to run evaluation on (cpu/cuda)
+        download_images: Whether to download COCO images
+        num_images: Number of images to evaluate
+    """
+    
+    print("Loading model and CLIP...")
     device = torch.device(device)
     clip_model, preprocess = clip.load('RN50x4', device=device, jit=False)
     tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
@@ -328,114 +483,226 @@ def evaluate_test_set(model_path, test_dir, ground_truth_path=None, device='cpu'
     model.load_state_dict(torch.load(model_path, map_location=device), strict=False)
     model.eval()
     model.to(device)
-    ground_truth = {}
-    if ground_truth_path and os.path.exists(ground_truth_path):
-        with open(ground_truth_path, 'r', encoding='utf-8') as f:
-            ground_truth = json.load(f)
-        print(f"Loaded {len(ground_truth)} ground truth captions")
     
+    # Download COCO images if requested
+    downloaded_images = []
+    if download_images and captions_file and os.path.exists(captions_file):
+        downloaded_images = download_coco_images(captions_file, test_dir, num_images)
+    
+    # Load COCO captions
+    captions_by_image_id = None
+    filename_to_image_id = None
+    if captions_file and os.path.exists(captions_file):
+        print(f"Loading captions from {captions_file}")
+        captions_by_image_id, filename_to_image_id, _ = load_coco_captions(captions_file)
+        print(f"Loaded captions for {len(captions_by_image_id)} images")
+    
+    # Get test images - either downloaded ones or from directory
     test_images = []
-    for ext in ['*.jpg', '*.jpeg', '*.png']:
-        test_images.extend([f for f in os.listdir(test_dir) if f.lower().endswith(ext[1:])])
+    if downloaded_images:
+        test_images = downloaded_images
+        print(f"Using {len(test_images)} downloaded images for evaluation")
+    else:
+        for ext in ['*.jpg', '*.jpeg', '*.png']:
+            import glob
+            pattern = os.path.join(test_dir, ext)
+            test_images.extend([os.path.basename(f) for f in glob.glob(pattern)])
+        
+        if len(test_images) > num_images:
+            test_images = test_images[:num_images]
+        print(f"Using {len(test_images)} existing images in directory for evaluation")
     
-    print(f"Found {len(test_images)} images")
     generated_captions = []
     
     for img_file in tqdm(test_images, desc="Generating captions:"):
         img_path = os.path.join(test_dir, img_file)
-        image = Image.open(img_path).convert("RGB")
-        image_input = preprocess(image).unsqueeze(0).to(device)
         
-        with torch.no_grad():
-            prefix = clip_model.encode_image(image_input).to(device, dtype=torch.float32)
-            prefix_embed = model.clip_project(prefix).reshape(1, 40, -1)
-        caption = generate2(
-            model, tokenizer,
-            embed=prefix_embed,
-            entry_length=30,
-            temperature=1.0
-        )
+        # Make sure the image exists
+        if not os.path.exists(img_path):
+            print(f"Warning: Image {img_file} not found at {img_path}")
+            continue
         
-        generated_captions.append({
-            'image': img_file,
-            'caption': caption
-        })
+        # Generate caption
+        try:
+            image = Image.open(img_path).convert("RGB")
+            image_input = preprocess(image).unsqueeze(0).to(device)
+            
+            with torch.no_grad():
+                prefix = clip_model.encode_image(image_input).to(device, dtype=torch.float32)
+                prefix_embed = model.clip_project(prefix).reshape(1, 40, -1)
+            
+            caption = generate2(
+                model, tokenizer,
+                embed=prefix_embed,
+                entry_length=30,
+                temperature=1.0
+            )
+            
+            generated_captions.append({
+                'image': img_file,
+                'caption': caption
+            })
+        except Exception as e:
+            print(f"Error processing image {img_file}: {str(e)}")
     
     print("\nEvaluation Metrics:")
     print("-" * 30)
     
-    if ground_truth:
-        bleu_scores = []
+    # Calculate metrics if we have ground truth captions
+    metrics = {}
+    if captions_by_image_id and filename_to_image_id:
         bleu1_scores = []
-        bleu2_scores = []
-        bleu3_scores = []
         bleu4_scores = []
         cider_scores = []
         
         smoothing = SmoothingFunction().method1
         
+        # For each generated caption
         for item in generated_captions:
-            img_name = item['image']
-            candidate = item['caption'].lower().strip()
-            candidate_tokens = word_tokenize(candidate)
-            
-            if img_name in ground_truth:
-                references = ground_truth[img_name]
-                reference_tokens = [word_tokenize(ref.lower().strip()) for ref in references]
-                
-                bleu1 = sentence_bleu(reference_tokens, candidate_tokens, 
-                                     weights=(1, 0, 0, 0), smoothing_function=smoothing)
-                bleu2 = sentence_bleu(reference_tokens, candidate_tokens, 
-                                     weights=(0.5, 0.5, 0, 0), smoothing_function=smoothing)
-                bleu3 = sentence_bleu(reference_tokens, candidate_tokens, 
-                                     weights=(0.33, 0.33, 0.33, 0), smoothing_function=smoothing)
-                bleu4 = sentence_bleu(reference_tokens, candidate_tokens, 
-                                     weights=(0.25, 0.25, 0.25, 0.25), smoothing_function=smoothing)
-                
-                bleu1_scores.append(bleu1)
-                bleu2_scores.append(bleu2)
-                bleu3_scores.append(bleu3)
-                bleu4_scores.append(bleu4)
-                bleu_scores.append(bleu4)  
-                cider = calculate_cider(candidate_tokens, reference_tokens)
-                cider_scores.append(cider)
+            img_file = item['image']
+            if img_file in filename_to_image_id:
+                image_id = filename_to_image_id[img_file]
+                if image_id in captions_by_image_id:
+                    # Get ground truth references
+                    references = captions_by_image_id[image_id]
+                    
+                    # Print out the references for each image
+                    print(f"\nImage: {img_file}")
+                    print(f"Generated caption: {item['caption']}")
+                    print("Ground truth captions:")
+                    for i, ref in enumerate(references):
+                        print(f"  {i+1}: {ref}")
+                    
+                    # Tokenize references and candidate
+                    tokenized_refs = [nltk.word_tokenize(ref.lower()) for ref in references]
+                    tokenized_candidate = nltk.word_tokenize(item['caption'].lower())
+                    
+                    # Calculate BLEU-1
+                    bleu1 = sentence_bleu(tokenized_refs, tokenized_candidate, 
+                                         weights=(1, 0, 0, 0), smoothing_function=smoothing)
+                    
+                    # Calculate BLEU-4
+                    bleu4 = sentence_bleu(tokenized_refs, tokenized_candidate, 
+                                         weights=(0.25, 0.25, 0.25, 0.25), smoothing_function=smoothing)
+                    
+                    # Calculate CIDEr
+                    cider = calculate_cider(tokenized_candidate, tokenized_refs)
+                    
+                    print(f"BLEU-1: {bleu1:.4f}")
+                    print(f"BLEU-4: {bleu4:.4f}")
+                    print(f"CIDEr: {cider:.4f}")
+                    
+                    bleu1_scores.append(bleu1)
+                    bleu4_scores.append(bleu4)
+                    cider_scores.append(cider)
         
-        if bleu_scores:
+        if bleu1_scores:
             avg_bleu1 = np.mean(bleu1_scores)
-            avg_bleu2 = np.mean(bleu2_scores)
-            avg_bleu3 = np.mean(bleu3_scores)
             avg_bleu4 = np.mean(bleu4_scores)
             avg_cider = np.mean(cider_scores)
             
+            print("\nAverage Metrics:")
             print(f"BLEU-1: {avg_bleu1:.4f}")
-            print(f"BLEU-2: {avg_bleu2:.4f}")
-            print(f"BLEU-3: {avg_bleu3:.4f}")
             print(f"BLEU-4: {avg_bleu4:.4f}")
             print(f"CIDEr: {avg_cider:.4f}")
             
             metrics = {
                 'BLEU-1': avg_bleu1,
-                'BLEU-2': avg_bleu2,
-                'BLEU-3': avg_bleu3,
                 'BLEU-4': avg_bleu4,
                 'CIDEr': avg_cider
             }
         else:
-            print("Warning: No matching images found in ground truth data")
-            metrics = {}
+            print("Warning: No matching images found in ground truth captions")
     else:
-        print("Warning: No ground truth captions provided. Cannot calculate BLEU and CIDEr scores.")
-        metrics = {}
+        print("Warning: No ground truth captions provided or no matching images found.")
+    
+    # Original metrics
+    print("\nOriginal Metrics:")
+    print("-" * 30)
+    
     avg_length = np.mean([len(item['caption'].split()) for item in generated_captions])
     print(f"Average caption length: {avg_length:.2f} words")
     
-    if not metrics:
-        metrics = {}
+    all_words = []
+    for item in generated_captions:
+        all_words.extend(item['caption'].lower().split())
+    vocab_diversity = len(set(all_words)) / len(all_words)
+    print(f"Lexical diversity: {vocab_diversity:.3f}")
+
+    consistency_scores = []
+    print("\nCalculating generation consistency...")
+    for i in range(min(num_images, len(generated_captions))):  
+        img_file = generated_captions[i]['image']
+        img_path = os.path.join(test_dir, img_file)
+        
+        try:
+            image = Image.open(img_path).convert("RGB")
+            image_input = preprocess(image).unsqueeze(0).to(device)
+            
+            captions = []
+            for _ in range(3):  
+                with torch.no_grad():
+                    prefix = clip_model.encode_image(image_input).to(device, dtype=torch.float32)
+                    prefix_embed = model.clip_project(prefix).reshape(1, 40, -1)
+                
+                caption = generate2(
+                    model, tokenizer,
+                    embed=prefix_embed,
+                    entry_length=30,
+                    temperature=1.0
+                )
+                captions.append(caption)
+            
+            smoothing = SmoothingFunction().method1
+            scores = []
+            for j in range(len(captions)):
+                for k in range(j+1, len(captions)):
+                    score = sentence_bleu([captions[j].split()], captions[k].split(), smoothing_function=smoothing)
+                    scores.append(score)
+            
+            if scores:
+                consistency_scores.append(np.mean(scores))
+        except Exception as e:
+            print(f"Error calculating consistency for image {img_file}: {str(e)}")
     
-    metrics['Average caption length'] = avg_length
+    avg_consistency = np.mean(consistency_scores) if consistency_scores else 0
+    print(f"Generating consistency: {avg_consistency:.3f}")
     
+    proper_endings = sum(1 for item in generated_captions if item['caption'].strip().endswith('.'))
+    grammar_score = proper_endings / len(generated_captions)
+    print(f"Grammatical integrity: {grammar_score:.3f}")
+    
+    appropriate_length = sum(1 for item in generated_captions 
+                           if 5 <= len(item['caption'].split()) <= 20)
+    length_score = appropriate_length / len(generated_captions)
+    print(f"Appropriateness of length: {length_score:.3f}")
+    
+    # Combine all metrics
+    all_metrics = {
+        'Average caption length': avg_length,
+        'Lexical diversity': vocab_diversity,
+        'Generating consistency': avg_consistency,
+        'Grammatical integrity': grammar_score,
+        'Appropriateness of length': length_score
+    }
+    
+    # Add BLEU and CIDEr scores if available
+    if metrics:
+        all_metrics.update(metrics)
+    
+    # Calculate overall score
+    original_score = (vocab_diversity + avg_consistency + grammar_score + length_score) / 4
+    all_metrics['Original aggregate score'] = original_score
+    
+    # If we have BLEU and CIDEr, calculate a new aggregate score
+    if 'BLEU-1' in metrics and 'CIDEr' in metrics:
+        new_score = (metrics['BLEU-1'] + metrics['BLEU-4'] + metrics['CIDEr'] + grammar_score) / 4
+        all_metrics['New aggregate score (with BLEU/CIDEr)'] = new_score
+        print(f"New aggregate score (with BLEU/CIDEr): {new_score:.3f}")
+    
+    print(f"Original aggregate score: {original_score:.3f}")
     results = {
-        'metrics': metrics,
+        'metrics': all_metrics,
         'generated_captions': generated_captions
     }
     
@@ -445,39 +712,4 @@ def evaluate_test_set(model_path, test_dir, ground_truth_path=None, device='cpu'
     
     print(f"Results saved to: {output_file}")
     
-    print("\nExample generated captions:")
-    print("-" * 50)
-    for i in range(min(5, len(generated_captions))):
-        print(f"Image: {generated_captions[i]['image']}")
-        print(f"Caption: {generated_captions[i]['caption']}")
-        print("-" * 50)
-    
     return results
-
-
-def main():
-    parser = argparse.ArgumentParser(description='Evaluating image caption generation models')
-    parser.add_argument('--model_path', type=str, 
-                       default='./checkpoints/clip_pro_prefix-best.pt',
-                       help='model path')
-    parser.add_argument('--test_dir', type=str, 
-                       default='./Test_Set',
-                       help='Test image file path')
-    parser.add_argument('--ground_truth', type=str, 
-                       default=None,
-                       help='Path to ground truth captions JSON file')
-    parser.add_argument('--device', type=str, 
-                       default='cuda' if torch.cuda.is_available() else 'cpu',
-                       help='Use device (cpu/cuda)')
-    
-    args = parser.parse_args()
-    
-    results = evaluate_test_set(
-        args.model_path, 
-        args.test_dir,
-        args.ground_truth,
-        args.device
-    )
-
-if __name__ == "__main__":
-    main()

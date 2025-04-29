@@ -1,11 +1,11 @@
 {
     "metrics": {
-        "平均标题长度": 10.25,
-        "词汇多样性": 0.6585365853658537,
-        "生成一致性": 1.0,
-        "语法完整性": 1.0,
-        "长度适当性": 1.0,
-        "综合得分": 0.9146341463414634
+        "Average caption length": 10.25,
+        "Lexical diversity": 0.6585365853658537,
+        "Generating consistency": 1.0,
+        "Grammatical integrity": 1.0,
+        "Appropriateness of length": 1.0,
+        "Aggregate score": 0.9146341463414634
     },
     "generated_captions": [
         {
