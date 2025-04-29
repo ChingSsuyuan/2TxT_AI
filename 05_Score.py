@@ -364,7 +364,6 @@ def evaluate_test_set(model_path, test_dir, ground_truth_path=None, device='cpu'
     print("\nEvaluation Metrics:")
     print("-" * 30)
     
-    # Calculate BLEU scores
     if ground_truth:
         bleu_scores = []
         bleu1_scores = []
@@ -384,7 +383,6 @@ def evaluate_test_set(model_path, test_dir, ground_truth_path=None, device='cpu'
                 references = ground_truth[img_name]
                 reference_tokens = [word_tokenize(ref.lower().strip()) for ref in references]
                 
-                # Calculate BLEU-1,2,3,4
                 bleu1 = sentence_bleu(reference_tokens, candidate_tokens, 
                                      weights=(1, 0, 0, 0), smoothing_function=smoothing)
                 bleu2 = sentence_bleu(reference_tokens, candidate_tokens, 
@@ -398,9 +396,7 @@ def evaluate_test_set(model_path, test_dir, ground_truth_path=None, device='cpu'
                 bleu2_scores.append(bleu2)
                 bleu3_scores.append(bleu3)
                 bleu4_scores.append(bleu4)
-                bleu_scores.append(bleu4)  # Use BLEU-4 as the main BLEU score
-                
-                # Calculate CIDEr score
+                bleu_scores.append(bleu4)  
                 cider = calculate_cider(candidate_tokens, reference_tokens)
                 cider_scores.append(cider)
         
@@ -430,8 +426,6 @@ def evaluate_test_set(model_path, test_dir, ground_truth_path=None, device='cpu'
     else:
         print("Warning: No ground truth captions provided. Cannot calculate BLEU and CIDEr scores.")
         metrics = {}
-    
-    # Add some basic statistics about generated captions
     avg_length = np.mean([len(item['caption'].split()) for item in generated_captions])
     print(f"Average caption length: {avg_length:.2f} words")
     
