@@ -485,7 +485,7 @@ def main():
                        help='Batch size')
     parser.add_argument('--seed', type=int, default=42,
                        help='random seed')
-    parser.add_argument('--learning_rate', type=float, default=2e-5,
+    parser.add_argument('--learning_rate', type=float, default=5e-5,
                        help='learning rate')
     parser.add_argument('--warmup_ratio', type=float, default=0.1,
                        help='warmup ratio')
