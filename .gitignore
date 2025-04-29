@@ -9,3 +9,4 @@ coco_image_title_data/vocabulary
 checkpoints/clip_pro_prefix-best.pt
 checkpoints/clip_pro_prefix-001.pt
 checkpoints/clip_pro_prefix-002.pt
+clip_pipeline.html

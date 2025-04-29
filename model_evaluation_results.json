@@ -1,0 +1,113 @@
+{
+  "images": [
+    {
+      "image_id": 392933,
+      "file_name": "000000392933.jpg",
+      "reference_captions": [
+        "A giraffe running across a grass covered field.",
+        "a single giraffe walking towards a group trees",
+        "A giraffe stands at the edge of some trees. ",
+        "A giraffe is standing on a pile of logs in a grassy field next to trees.",
+        "A giraffe running away through grass toward trees."
+      ],
+      "generated_caption": "A giraffe that is standing in the grass.",
+      "bleu_scores": {
+        "BLEU-1": 0.8888888888888888,
+        "BLEU-2": 0.4714045207910317,
+        "BLEU-3": 0.14981576534510146,
+        "BLEU-4": 0.08528733595636039
+      },
+      "cider_score": 1.7330267897066816
+    },
+    {
+      "image_id": 520324,
+      "file_name": "000000520324.jpg",
+      "reference_captions": [
+        "Someone is driving a cart near a single engine airplane.",
+        "a small air plane on a small run way",
+        "A small airplane that is parked near a run way.",
+        "A small airplane sitting next to an airport runway.",
+        "A crop dusting plane next to grassy field and tree."
+      ],
+      "generated_caption": "A couple of propeller planes parked in a hanger.",
+      "bleu_scores": {
+        "BLEU-1": 0.4,
+        "BLEU-2": 0.06666666666666667,
+        "BLEU-3": 0.039423944368881844,
+        "BLEU-4": 0.02984745896009824
+      },
+      "cider_score": 1.2274941793878167
+    },
+    {
+      "image_id": 14473,
+      "file_name": "000000014473.jpg",
+      "reference_captions": [
+        "a red and black train is coming down the tracks",
+        "A high speed train in movement, with workers.",
+        "A train speeding down tracks through a rural field.",
+        "A very nice looking toy train and some workers on the tracks.",
+        "A red and black train is traveling down the tracks. "
+      ],
+      "generated_caption": "A red train traveling down tracks next to a platform.",
+      "bleu_scores": {
+        "BLEU-1": 0.7272727272727273,
+        "BLEU-2": 0.46709936649691375,
+        "BLEU-3": 0.13705980056671538,
+        "BLEU-4": 0.07419446627365012
+      },
+      "cider_score": 1.8408221877600361
+    },
+    {
+      "image_id": 430073,
+      "file_name": "000000430073.jpg",
+      "reference_captions": [
+        "a cow walking on a city street near people ",
+        "A large, white cow walking through the streets of a small town",
+        "In the Asian market, one can find residents, tourists, and domestic animals. ",
+        "A white bull walks along the sidewalk near people.",
+        "an ox standing in a busy town area with people going about their normal business"
+      ],
+      "generated_caption": "A cow is standing outside of a shop with people.",
+      "bleu_scores": {
+        "BLEU-1": 0.7272727272727273,
+        "BLEU-2": 0.5393598899705937,
+        "BLEU-3": 0.15070923960274815,
+        "BLEU-4": 0.07972714256536027
+      },
+      "cider_score": 1.2795276645155504
+    },
+    {
+      "image_id": 272049,
+      "file_name": "000000272049.jpg",
+      "reference_captions": [
+        "A large yellow dump truck sitting on green lawn.",
+        "Large brown truck parked on the grass next to an airplane. ",
+        "A construction truck sits in a yard near the airport.",
+        "A yellow hauling truck waits at an airport",
+        "A yellow truck is parked on grass near a jumbo jet on display."
+      ],
+      "generated_caption": "A large truck with a large wooden crate on it's back.",
+      "bleu_scores": {
+        "BLEU-1": 0.46153846153846156,
+        "BLEU-2": 0.19611613513818402,
+        "BLEU-3": 0.07234344883380851,
+        "BLEU-4": 0.04324227075463215
+      },
+      "cider_score": 1.4130164049235623
+    }
+  ],
+  "model_average_metrics": {
+    "BLEU-1": 0.6409945609945611,
+    "BLEU-2": 0.348129315812678,
+    "BLEU-3": 0.10987043974345108,
+    "BLEU-4": 0.06245973490202024,
+    "CIDEr": 1.4987774452587292
+  },
+  "human_leave_one_out_metrics": {
+    "BLEU-1": 0.5703581221172564,
+    "BLEU-2": 0.2953483269733802,
+    "BLEU-3": 0.1727081470967406,
+    "BLEU-4": 0.11176994427038958,
+    "CIDEr": 1.587297443691274
+  }
+}
