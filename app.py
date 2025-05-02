@@ -9,8 +9,6 @@ import json
 import subprocess
 import uuid
 import shutil
-import requests
-from urllib.parse import quote
 
 app = Flask(__name__)
  
@@ -18,9 +16,9 @@ app = Flask(__name__)
 UPLOAD_FOLDER = 'test_images'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 CAPTION_OUTPUT = 'generated_captions.json'
-MODEL_WEIGHTS = './checkpoints/clip_pro_prefix-best.pt'  # Path to model 
-CLIP_MODEL = 'RN50x4'  # CLIP model type
-USE_CPU = True  # Set to True to force CPU usage
+MODEL_WEIGHTS = './checkpoints/clip_pro_prefix-best.pt'  
+CLIP_MODEL = 'RN50x4'  
+USE_CPU = True  
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def allowed_file(filename):
@@ -82,32 +80,6 @@ def upload_file():
             return jsonify({'error': f'Error generating caption: {str(e)}'}), 500
     
     return jsonify({'error': 'Invalid file type'}), 400
-
-@app.route('/translate', methods=['POST'])
-def translate_text():
-    """Handle text translation using LibreTranslate API"""
-    data = request.json
-    if not data or 'text' not in data or 'target_language' not in data:
-        return jsonify({'error': 'Missing text or target language'}), 400
-    
-    text = data['text']
-    target_language = data['target_language']
-    
-    try:
-        url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl={target_language}&dt=t&q={quote(text)}"
-        
-        response = requests.get(url)
-        if response.status_code != 200:
-            return jsonify({'error': 'Translation service error'}), 500
-        result = response.json()
-        translated_text = ''.join([sentence[0] for sentence in result[0]])
-        
-        return jsonify({
-            'success': True,
-            'translated_text': translated_text
-        })
-    except Exception as e:
-        return jsonify({'error': f'Translation error: {str(e)}'}), 500
 
 @app.route('/health', methods=['GET'])
 def health_check():

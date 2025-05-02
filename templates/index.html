@@ -118,24 +118,6 @@
             <div class="caption-box">
                 <p id="caption"></p>
             </div>
-            <div class="mt-3">
-                <select id="targetLanguage" class="form-select mb-2">
-                    <option value="zh">Chinese (中文)</option>
-                    <option value="es">Spanish (Español)</option>
-                    <option value="fr">French (Français)</option>
-                    <option value="de">German (Deutsch)</option>
-                    <option value="ja">Japanese (日本語)</option>
-                    <option value="ko">Korean (한국어)</option>
-                    <option value="ru">Russian (Русский)</option>
-                </select>
-                <button id="translateButton" class="btn btn-secondary">Translate</button>
-            </div>
-            <div class="translation-container mt-3" id="translationContainer" style="display: none;">
-                <h4>Translated Caption:</h4>
-                <div class="caption-box">
-                    <p id="translatedCaption"></p>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -153,10 +135,7 @@
             const resultContainer = document.getElementById('resultContainer');
             const captionElement = document.getElementById('caption');
             const errorMessage = document.getElementById('errorMessage');
-            const translateButton = document.getElementById('translateButton');
-            const targetLanguage = document.getElementById('targetLanguage');
-            const translationContainer = document.getElementById('translationContainer');
-            const translatedCaption = document.getElementById('translatedCaption');
+
             browseButton.addEventListener('click', function() {
                 fileInput.click();
             });
@@ -220,10 +199,8 @@
                 }
                 reader.readAsDataURL(file);
 
-
                 resultContainer.style.display = 'none';
                 errorMessage.style.display = 'none';
-                translationContainer.style.display = 'none';
                 uploadFile(file);
             }
             
@@ -233,7 +210,6 @@
                 imagePreviewContainer.style.display = 'none';
                 resultContainer.style.display = 'none';
                 errorMessage.style.display = 'none';
-                translationContainer.style.display = 'none';
             }
             
             clearButton.addEventListener('click', clearImage);
@@ -275,49 +251,6 @@
                 errorMessage.textContent = message;
                 errorMessage.style.display = 'block';
             }
-            
-            translateButton.addEventListener('click', function() {
-                const originalCaption = captionElement.textContent;
-                const language = targetLanguage.value;
-                
-                if (!originalCaption) {
-                    showError('No caption to translate.');
-                    return;
-                }
-                
-                translateButton.disabled = true;
-                translateButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Translating...';
-                
-                fetch('/translate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        text: originalCaption,
-                        target_language: language
-                    })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(data => {
-                            throw new Error(data.error || 'Translation failed');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    translatedCaption.textContent = data.translated_text;
-                    translationContainer.style.display = 'block';
-                })
-                .catch(error => {
-                    showError(error.message);
-                })
-                .finally(() => {
-                    translateButton.disabled = false;
-                    translateButton.textContent = 'Translate';
-                });
-            });
         });
     </script>
 </body>
