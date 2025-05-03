@@ -9,10 +9,9 @@ import argparse
 from tqdm import tqdm
 import random
 
-
+# Download Coco images
 def download_coco_images(annotation_file, output_dir, dataset_type, max_images=None):
     print(f"Loading: {annotation_file}")
-    
     with open(annotation_file, 'r') as f:
         data = json.load(f)
     images_info = data['images']
@@ -72,7 +71,7 @@ def download_coco_images(annotation_file, output_dir, dataset_type, max_images=N
     print(f"Download complete! Success: {success_count}, Failure: {failed_count}")
     return success_count
 
-
+# Encoder->CLIP
 def encode_images(image_dir, clip_model, preprocess, batch_size, output_prefix, dataset_type):
     """Coding images using the CLIP model"""
     print(f"Start encoding {dataset_type} images...")
@@ -81,7 +80,6 @@ def encode_images(image_dir, clip_model, preprocess, batch_size, output_prefix, 
     print(f"Find {len(image_files)} images")
 
     if not image_files:
-    
         return 0
 
     image_ids = [int(f.split('.')[0]) for f in image_files]
@@ -92,8 +90,6 @@ def encode_images(image_dir, clip_model, preprocess, batch_size, output_prefix, 
     annotation_file = f'./coco_data/annotations/captions_{dataset_type}2017.json'
     with open(annotation_file, 'r') as f:
         data = json.load(f)
-    
-    # 创建图像ID到标题的映射
     id_to_captions = {}
     for ann in data['annotations']:
         img_id = ann['image_id']
@@ -138,8 +134,6 @@ def encode_images(image_dir, clip_model, preprocess, batch_size, output_prefix, 
                 
             except Exception as e:
                 print(f"process image {file_path} Error: {str(e)}")
-        
-        # 保存批次结果
         if batch_embeddings:
             batch_tensor = torch.cat(batch_embeddings, dim=0)
             batch_file = f"{output_prefix}_{dataset_type}_batch_{i//batch_size + 1}.pkl"
@@ -156,7 +150,7 @@ def encode_images(image_dir, clip_model, preprocess, batch_size, output_prefix, 
     print(f"Encoding Complete! Processing{total_processed} captions")
     return total_processed
 
-
+# Output pkl files
 def merge_pkl_files(output_prefix, dataset_type):
 
     print(f"Merge {dataset_type} Files...")
@@ -212,7 +206,7 @@ def merge_pkl_files(output_prefix, dataset_type):
         return False
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": #Main control module
     parser = argparse.ArgumentParser(description='Downloading COCO images and encoding them in CLIP')
     parser.add_argument('--dataset', type=str, choices=['train', 'val'], default='train',
                        help='Type of dataset to be processed (default: train)')
@@ -240,7 +234,6 @@ if __name__ == "__main__":
     print(f"Batch Size     : {args.batch_size}")
     print(f"Output Prefix  : {args.output_prefix}")
     
-    # 下载图像
     if not args.encode_only and not args.merge_only:
         print("\n===== Step 1: Download the image =====")
         download_coco_images(annotation_file, image_dir, dataset_type, args.max_images)
