@@ -16,7 +16,6 @@ import nltk
 nltk.download('wordnet', quiet=True)
 nltk.download('omw-1.4', quiet=True)
 
-# Import the classes and functions from mapping.py instead of redefining them
 from mapping import (
     MappingType,
     MLP,
