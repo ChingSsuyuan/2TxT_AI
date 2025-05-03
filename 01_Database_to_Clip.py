@@ -208,7 +208,7 @@ def merge_pkl_files(output_prefix, dataset_type):
 
 if __name__ == "__main__": #Main control module
     parser = argparse.ArgumentParser(description='Downloading COCO images and encoding them in CLIP')
-    parser.add_argument('--dataset', type=str, choices=['train', 'val'], default='train',
+    parser.add_argument('--dataset', type=str, choices=['train', 'val'], default='val',
                        help='Type of dataset to be processed (default: train)')
     parser.add_argument('--batch-size', type=int, default=2000,
                        help='Batch size for coding (default: 200)')
