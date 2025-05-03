@@ -1,7 +1,6 @@
 
 """
 This is the main application file for the Image Caption Generator web app.
-It uses Flask to handle HTTP requests and file uploads.
 """
 from flask import Flask, request, render_template, jsonify
 import os
