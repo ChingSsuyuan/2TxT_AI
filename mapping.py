@@ -123,6 +123,13 @@ class TransformerMapper(nn.Module):
         prefix = torch.cat((x, prefix), dim=1)
         out = self.transformer(prefix)[:, self.clip_length:]
         return out
+    
+    def forward_with_attention(self, x, y=None, mask=None):
+        attentions = []
+        for layer in self.layers:
+            x, att = layer.forward_with_attention(x, y, mask)
+            attentions.append(att)
+        return x, attentions
 
 class ClipCaptionModel(nn.Module):
     def get_dummy_token(self, batch_size: int, device):

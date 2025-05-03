@@ -15,7 +15,17 @@ import random
 import numpy as np
 from typing import Tuple, Optional, Union
 
-
+from mapping import (
+    MappingType,
+    MLP,
+    MlpTransformer,
+    TransformerLayer,
+    MultiHeadAttention,
+    Transformer,
+    TransformerMapper,
+    ClipCaptionModel,
+    generate2
+)
 class MappingType(Enum):
     MLP = 'mlp'
     Transformer = 'transformer'
@@ -53,7 +63,6 @@ class ClipProDataset(Dataset):
             prefix = prefix.float()
             prefix = prefix / prefix.norm(2, -1)
         return tokens, mask, prefix
-
     def __init__(self, data_path: str, prefix_length: int, gpt2_type: str = "gpt2",
                  normalize_prefix=False, feature_noise_scale=0.1):
         self.tokenizer = GPT2Tokenizer.from_pretrained(gpt2_type)
@@ -68,7 +77,7 @@ class ClipProDataset(Dataset):
         print("Loading CLIP_Pro data...")
         self.prefixes = all_data["clip_embedding"]
         
-        # Get captions from the structure based on 01_Database_to_Clip.py
+        # Get captions 01_Database_to_Clip.py
         captions_raw = all_data["captions"]
         self.captions = [caption['caption'] for caption in captions_raw]
         
@@ -348,7 +357,7 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
         val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
         print(f"Validation Set Size: {len(val_dataset)} samples")
     
-    # Learning rate modify
+    # Learning rate 
     total_steps = len(train_dataloader) * epochs
     warmup_steps = min(warmup_steps, int(total_steps * 0.1)) 
     
@@ -466,6 +475,7 @@ def train(dataset: ClipProDataset, val_dataset: Optional[ClipProDataset], model:
 
 
 def main():
+    # Main Control
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', default='./CLIP_Pro_train_merged.pkl',
                        help='Training data file path')
