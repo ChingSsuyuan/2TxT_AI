@@ -15,7 +15,11 @@ from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 import nltk
 nltk.download('wordnet', quiet=True)
 nltk.download('omw-1.4', quiet=True)
+"""
 
+This module can be used to evaluate generated captions  
+
+"""
 from mapping import (
     MappingType,
     MLP,
