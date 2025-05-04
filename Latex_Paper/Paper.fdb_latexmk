@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1746391738.90873 "/Users/michaeljing/Desktop/Projects/AI_model/Latex_Paper/Paper.tex" "Paper.pdf" "Paper" 1746391739.65326 0
-  "/Users/michaeljing/Desktop/Projects/AI_model/Latex_Paper/Paper.tex" 1746391738.6223 15110 b82e9fe94f8aee0de0f004dad51b55fd ""
+["pdflatex"] 1746395219.39312 "/Users/michaeljing/Desktop/Projects/AI_model/Latex_Paper/Paper.tex" "Paper.pdf" "Paper" 1746395220.50002 0
+  "/Users/michaeljing/Desktop/Projects/AI_model/Latex_Paper/Paper.tex" 1746395218.91694 17034 8fcf3028bc19e23b3e027e8f3c7cdd0f ""
   "/usr/local/texlive/2024/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -144,6 +144,9 @@
   "/usr/local/texlive/2024/texmf-dist/tex/latex/base/inputenc.sty" 1705352648 5048 425739d70251273bf93e3d51f3c40048 ""
   "/usr/local/texlive/2024/texmf-dist/tex/latex/base/size11.clo" 1705352648 8464 59874a3b0776c73e2a138b025d8473dd ""
   "/usr/local/texlive/2024/texmf-dist/tex/latex/booktabs/booktabs.sty" 1579038678 6078 f1cb470c9199e7110a27851508ed7a5c ""
+  "/usr/local/texlive/2024/texmf-dist/tex/latex/caption/caption.sty" 1696191071 56128 c2ccf1a29d78c33bc553880402e4fb9a ""
+  "/usr/local/texlive/2024/texmf-dist/tex/latex/caption/caption3.sty" 1696191071 72619 ee90b6612147680fd73c3b1406a74245 ""
+  "/usr/local/texlive/2024/texmf-dist/tex/latex/caption/subcaption.sty" 1690576852 12494 0c0cdb824278a4d51cefeb2e79901315 ""
   "/usr/local/texlive/2024/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty" 1579991033 13886 d1306dcf79a944f6988e688c1785f9ce ""
   "/usr/local/texlive/2024/texmf-dist/tex/latex/etoolbox/etoolbox.sty" 1601931149 46845 3b58f70c6e861a13d927bff09d35ecbc ""
   "/usr/local/texlive/2024/texmf-dist/tex/latex/geometry/geometry.sty" 1578002852 41601 9cf6c5257b1bc7af01a58859749dd37a ""
@@ -189,9 +192,13 @@
   "/usr/local/texlive/2024/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1738009153.89061 5467645 128b85b7cde5f5edc5cb7f1dd7ff8736 ""
   "/usr/local/texlive/2024/texmf-var/web2c/pdftex/pdflatex.fmt" 1738009116 8221423 a0782709dc982e6c0cb9d395aa5b55f7 ""
   "/usr/local/texlive/2024/texmf.cnf" 1710266656 577 e590dabc9e28c5b61546e15f63eebcdf ""
-  "Paper.aux" 1746391739.5539 3610 4e2e109e7b33ad86e30612a5b55c6902 "pdflatex"
-  "Paper.out" 1746391739.5544 3475 b8b66503afa2fb3267a79c2354c3ee25 "pdflatex"
-  "Paper.tex" 1746391738.6223 15110 b82e9fe94f8aee0de0f004dad51b55fd ""
+  "F4.png" 1746394178.37345 1169327 00d83198e23fa99db9d7d5fa034add4e ""
+  "F5.png" 1746394467.67167 1108484 738130e2d79695f9079ac8c109ed6411 ""
+  "Paper.aux" 1746395220.40512 4241 77ad615a3167ee8e92a400a3b732d01c "pdflatex"
+  "Paper.out" 1746395220.40582 3263 085d3311bbd879e1193c9712fb4f9921 "pdflatex"
+  "Paper.tex" 1746395218.91694 17034 8fcf3028bc19e23b3e027e8f3c7cdd0f ""
+  "f2.png" 1746392138.70147 127235 1c99e0cb163ee581575ef7afecb06664 ""
+  "f3.png" 1746392958.22976 81352 68693182870549f960e2a649f4923c19 ""
   "figure1.png" 1746389496.32472 183030 11a07dd129368edcfc3e2c3297e7555e ""
   (generated)
   "Paper.aux"

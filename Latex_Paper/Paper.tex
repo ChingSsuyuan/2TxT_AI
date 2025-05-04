@@ -1,4 +1,6 @@
 \documentclass[11pt]{article}
+\usepackage{graphicx}
+\usepackage{subcaption}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{amsmath}
@@ -129,14 +131,14 @@ image input, feature extraction and encoding, feature processing,
 feature decoding, model training and error evaluation. We will also 
 introduce the optimization we used.
 
-\begin{figure}[h]
+    \begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{figure1.png}
     \caption{CLIP+GPT-2 Training Pipeline}
     \label{fig:architecture}
     \end{figure}
 
-    \subsubsection{Data Set}
+    \subsubsection{DataSet}
 
     We utilize the MS COCO dataset \cite{COCO}for training and evaluation, 
     MS COCO (Microsoft Common Objects in Context) 
@@ -209,62 +211,107 @@ Where:
 This objective function aims to find the parameter set $\hat{\theta}$ that minimizes the total negative log-likelihood 
 across the training dataset. During training, the model updates $\theta$ using optimization 
 techniques such as gradient descent, guided by cross-validation to avoid overfitting and improve generalization.
-
-\textbf{Training Details:} We train our model using these hyperparameter after cross-validation:
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{f2.png}
+    \caption{Training and validation loss over epochs}
+    \end{figure}
+\pagebreak
+\section{Experiments and Results}
+\subsection{Training Details}
+We train our model using these hyperparameter after cross-validation:
 \begin{itemize}
   \item Prefix length: 40
   \item Transformer layers: 8
-  \item Optimizer: Adam with a learning rate of $5 \times 10^{-5}$
-  \item Number of epochs: 20
+  \item Number of epochs: 12
   \item Noise rate: 10\%
+  \item Optimizer: Adam with a learning rate of $5 \times 10^{-5}$
 \end{itemize}
 
-\subsection{Evaluation Protocol}
-We evaluate the quality of learned representations by training a simple linear classifier on top of the
-frozen embeddings.
-
-\section{Experiments and Results}
-
-\subsection{Dataset and Preprocessing}
 We conduct experiments on:
 \begin{itemize}
-  \item \textbf{CIFAR-10:} A 10-class dataset with 60,000 images.
-  \item \textbf{STL-10:} A larger dataset often used for unsupervised learning benchmarks.
+  \item \textbf{COCO Image Dataset:}
+  
+  Training set: 80, 000 images with 5 captions per image.
+
+  Validation set: 2,000 images.
+  
 \end{itemize}
 
-\subsection{Baseline Comparisons}
-We compare SimCLR embeddings with:
+\subsection{Evaluation Metrics}
+After completing model training, we need to evaluate the quality of generated captions to assess the effectiveness of our approach. Therefore, we adopt two widely used 
+automatic evaluation metrics in the field of image captioning: BLEU and CIDEr.
 \begin{itemize}
-  \item PCA-based dimensionality reduction ($d = 128$)
-  \item Autoencoders trained on the same dataset
-  \item Supervised ResNet-18 trained on CIFAR-10
+    \item \textbf{Bilingual Evaluation Understudy }
+    
+    BLEU is a baseline evaluation 
+    metric of our model that measures the accuracy of n-gram overlap between predicted captions 
+    and one or more real captions\cite{Papineni}. It emphasizes syntactic similarity and is particularly sensitive to exact word 
+    matching and word order. However, this criterion lacks semantic awareness and often penalizes correct words due to different word position information.
+
+    \item \textbf{Consensus-based Image Description Evaluation}
+    To address the shortcomings of the above evaluation method, we also chose the CIDEr
+     (Consensus-based Image Description Evaluation) \cite{vedantam2015cider}
+     evaluation metric, which is designed specifically for image 
+     captioning. It uses a TF-IDF weighted n-gram model to evaluate how well the 
+     generated captions match the manually generated captions. This design increases the 
+     weights of rare but informative words (e.g., nouns, verbs, adjectives, etc., which often contain unique image information) 
+     while reducing the weights of function words such as articles (a, the), quantifiers (some, many), and prepositions (in, on, at).
 \end{itemize}
 
-\begin{table}[h]
-\centering
-\begin{tabular}{lcc}
-\toprule
-Method & CIFAR-10 Accuracy (\%) & STL-10 Accuracy (\%) \\
-\midrule
-Supervised ResNet-18 & 92.5 & 85.4 \\
-PCA + kNN & 45.6 & 38.2 \\
-Autoencoder + kNN & 55.3 & 49.6 \\
-SimCLR (Ours) & 80.2 & 76.4 \\
-\bottomrule
-\end{tabular}
-\caption{Comparison of representation learning methods. SimCLR significantly outperforms classical techniques.}
-\end{table}
+\pagebreak
+\subsection{Generation Results}
+\textbf{Prediction Scores:}
 
-\subsection{Ablation Studies}
-\textbf{Effect of Temperature $\tau$:} We analyze how different values of $\tau$ in the contrastive loss impact performance.
+We compute BLEU and CIDEr on our test set and compare the original captions' scores with our outputs:
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{f3.png}
+    \caption{Model vs Human Performance on Image Captioning}
+    \end{figure}
+\begin{itemize}
+    \item Human captions show better performance on longer word sequences, indicating more natural grammatical structure.
+    \item The CIDEr score shows our model can achieve 94.4\% of human-level consensus quality.
+\end{itemize}
+\pagebreak
+\textbf{Web-based Deployment for Real-time Captioning}
+
+We design and deploy a website to realize our model
+function. The website is able to upload images and load the pre-trained model to generate 
+captions within 10 seconds.
+
+\begin{figure}[h]
+    \centering
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{F4.png}
+        \caption{Example 1}
+        \label{fig:upload}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.43\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{F5.png}
+        \caption{Example 2}
+        \label{fig:caption}
+    \end{subfigure}
+    \caption{Web demo of our deployed model: From image upload to automatic caption generation}
+    \label{fig:web_demo}
+\end{figure}
 
 \section{Discussion}
 
 \subsection{Key Findings}
 \begin{itemize}
-  \item SimCLR significantly outperforms PCA and autoencoders in feature learning.
-  \item The choice of augmentations greatly affects performance.
-  \item Higher temperature values in contrastive loss lead to better separation of features.
+  \item Automated organization of visual content: 
+  
+  Our model efficiently manages unlabeled images, reducing the need for manual effort.  
+  \item Effective CLIP-to-GPT-2 Mapping:
+  
+  Our multi-head attention mechanism bridges visual and textual modalities for high-quality captions.
+  \item Noise Injection Boosts Generalization:
+  
+  Introducing noise during training boosts generalization and helps create diverse, accurate captions.
 \end{itemize}
 
 \subsection{Future Work}
@@ -296,17 +343,12 @@ insights into optimizing contrastive learning for different datasets.
     \bibitem{COCO}
     Xinlei Chen, Hao Fang, Tsung-Yi Lin, Ramakrishna Vedantam, Saurabh Gupta, Piotr Dollár, and C Lawrence Zitnick. 2015. Microsoft coco captions: Data collection and evaluation server. arXiv preprint arXiv:1504.00325.
     
-    \bibitem{papineni2002bleu}
+    \bibitem{Papineni}
     Papineni, K., Roukos, S., Ward, T., \& Zhu, W. J. (2002). ``BLEU: a method for automatic evaluation of machine translation.'' ACL 2002.
     
     \bibitem{vedantam2015cider}
     Vedantam, R., Lawrence Zitnick, C., \& Parikh, D. (2015). ``CIDEr: Consensus-based image description evaluation.'' CVPR 2015.
     
-    \bibitem{chen2020simple}
-    Ting Chen, Simon Kornblith, Mohammad Norouzi, Geoffrey Hinton. ``A Simple Framework for Contrastive Learning of Visual Representations.'' ICML 2020.
-    
-    \bibitem{hinton2006reducing}
-    Geoffrey Hinton, Ruslan Salakhutdinov. ``Reducing the Dimensionality of Data with Neural Networks.'' Science, 2006.
     \end{thebibliography}
 
 \end{document}
