@@ -14,7 +14,11 @@ from enum import Enum
 import argparse
 import glob
 import json
+"""
 
+This module can be used to prdict captions from image catalogue 
+
+"""
 
 N = type(None)
 V = np.array
