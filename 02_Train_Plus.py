@@ -14,7 +14,11 @@ import json
 import random
 import numpy as np
 from typing import Tuple, Optional, Union
+"""
 
+This module can be used to train the model
+
+"""
 from mapping import (
     MappingType,
     MLP,

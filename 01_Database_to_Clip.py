@@ -9,7 +9,11 @@ import argparse
 from tqdm import tqdm
 import random
 
-# Download Coco images
+"""
+
+This module can be used to download datasat and encode images
+
+"""
 def download_coco_images(annotation_file, output_dir, dataset_type, max_images=None):
     print(f"Loading: {annotation_file}")
     with open(annotation_file, 'r') as f:

@@ -14,7 +14,7 @@ from collections import defaultdict
 from transformers import GPT2Tokenizer
 """
 
-This module can be used to evaluate generated captions  
+This module can be used to evaluate generated captions too
 
 """
 from mapping import (
