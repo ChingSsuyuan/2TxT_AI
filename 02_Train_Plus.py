@@ -352,7 +352,7 @@ def main():
                        help='Saves the model every i epochs')
     parser.add_argument('--save_steps', type=int, default=10000,
                        help='save_steps')
-    parser.add_argument('--bs', type=int, default=40,
+    parser.add_argument('--bs', type=int, default=64,
                        help='Batch size')
     parser.add_argument('--seed', type=int, default=42,
                        help='random seed')

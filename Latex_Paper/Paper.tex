@@ -54,6 +54,8 @@ translating it into coherent text descriptions.
 
 Motivated by this progress, we focus our project on replicating a CLIP+GPT-2-based image captioning system, with inspriation from Nukrai et al.\cite{Nukrai2022}. Through this project, we seek to explore and deepen our understanding of 
 machine learning, as well as its broader applications in fields such as computer vision and natural language generation.
+
+Our goal is to:
 \begin{itemize}
     \item Leverage the pretrained CLIP model to extract semantically rich image embeddings without the need for training a custom vision encoder.
     \item Utilize the generative capabilities of GPT-2 to produce fluent and coherent natural language captions.
@@ -100,13 +102,18 @@ machine learning, as well as its broader applications in fields such as computer
     image information. Multi-head Attention network allows the model to 
     learn how different regions in the image affect language production.
 
-We compare these classical approaches with SimCLR to understand its advantages and limitations.
+We compare these advanced approaches of image caption generation to understand its 
+advantages and limitations, and implement these methods in the process of model training to get our own model.
 \pagebreak
 \section{Methodology}
 
 \subsection{Implementation Details}
-\textbf{Backbone Network:} We use a ResNet-18 as the feature encoder. The final representation is fed into
-a two-layer MLP projection head.
+\textbf{Detail of Implementation and pipeline:} This is the pipeline of 
+our entire training process, which mainly includes multiple steps: 
+image input, feature extraction and encoding, feature processing, 
+feature decoding, model training and error evaluation. We will also 
+introduce the optimization we used.
+
 
 \textbf{Augmentation Pipeline:} SimCLR relies heavily on augmentations, which include:
 \begin{itemize}
@@ -120,12 +127,13 @@ a two-layer MLP projection head.
     \end{equation}
     where $\text{sim}(z_i, z_j)$ is the cosine similarity between embeddings, and $\tau$ is the temperature hyperparameter.
     
-\textbf{Training Details:} We train SimCLR on CIFAR-10 and STL-10 using:
+\textbf{Training Details:} We train our model using these hyperparameter after cross-validation:
 \begin{itemize}
-  \item Batch size: \{128, 256, 512\}
-  \item Temperature parameter: \{0.07, 0.1, 0.5\}
-  \item Optimizer: Adam with a learning rate of $3 \times 10^{-4}$
-  \item Number of epochs: 200
+  \item Prefix length: 40
+  \item Transformer layers: 8
+  \item Optimizer: Adam with a learning rate of $5 \times 10^{-5}$
+  \item Number of epochs: 20
+  \item Noise rate: 10\%
 \end{itemize}
 
 \subsection{Evaluation Protocol}
