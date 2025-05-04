@@ -52,9 +52,7 @@ fluent caption generation by leveraging large-scale pretraining on aligned image
 . These models demonstrate remarkable capabilities in understanding visual content and 
 translating it into coherent text descriptions.
 
-Motivated by these developments, and after reviewing related 
-literature \cite{Nukrai2022},we aim to replicate a CLIP+GPT-2 based 
-image captioning system. Through this project, we seek to explore and deepen our understanding of 
+Motivated by this progress, we focus our project on replicating a CLIP+GPT-2-based image captioning system, with inspriation from Nukrai et al.\cite{Nukrai2022}. Through this project, we seek to explore and deepen our understanding of 
 machine learning, as well as its broader applications in fields such as computer vision and natural language generation.
 \begin{itemize}
     \item Leverage the pretrained CLIP model to extract semantically rich image embeddings without the need for training a custom vision encoder.
@@ -66,46 +64,44 @@ machine learning, as well as its broader applications in fields such as computer
 \pagebreak
 \section{Background and Related Work}
 
-\subsection{CLIP(Contrastive Language-Image Pretraining)}
-CLIP from OpenAI is a visual-language model. Instead of relying on 
-task-specific supervised learning, CLIP is trained on a dataset of 400
- million image-text pairs collected from the internet using a contrastive 
- loss function. CLIP consists of two separate encoders: a visual encoder 
- (ResNet) for images, and a text encoder (Transformer) for captions. 
- Its ability to generate rich, semantically meaningful image 
- embeddings makes CLIP a powerful foundation for our systems and 
- an ideal visual component in our CLIP+GPT-2 image captioning pipeline. 
- For example, according to Mokady et al.\cite{Mokady2021}, it mentioned that the visual encoding capability of 
- CLIP can be used to embed and project the generated images into the input 
- space of GPT-2 to generate prefixes, which helps the final caption generation of GPT-2. Inspired by this article, we decided to study the CLIP architecture and implement related deployments.
+    \subsection{Contrastive Language-Image Pretraining(CLIP)}
+    CLIP from OpenAI is a visual-language model. Instead of relying on 
+    task-specific supervised learning, CLIP is trained on a dataset of 400
+    million image-text pairs collected from the internet using a contrastive 
+    loss function. CLIP consists of two separate encoders: a visual encoder 
+    (ResNet) for images, and a text encoder (Transformer) for captions. 
+    Its ability to generate rich, semantically meaningful image 
+    embeddings makes CLIP a powerful foundation for our systems and 
+    an ideal visual component in our CLIP+GPT-2 image captioning pipeline. 
+    For example, according to Mokady et al.\cite{Mokady2021}, it mentioned that the visual encoding capability of 
+    CLIP can be used to embed and project the generated images into the input 
+    space of GPT-2 to generate prefixes, which helps the final caption generation of GPT-2. Inspired by this article, we decided to study the CLIP architecture and implement related deployments.
 
- \subsection{CLIP(Contrastive Language-Image Pretraining)}
- GPT-2 is a large-scale language model based on the Transformer 
- decoder architecture proposed by Radford et al. \cite{Radford}. 
- According to the paper, Transformer completely replaces the traditional RNN or 
- CNN structure with self-attention, which is more efficient and accurate when processing 
- long sequence dependencies. Therefore, we consider implementing the transformer 
- structure as our decoder of the whole pipeline. Unlike the traditional 
- Transformer, which contains both encoder and decoder components, 
- GPT-2 uses only a decoder. This design enables the model to predict the next token based solely on previously generated tokens, 
- making the generated text semantically relevant and well suited for text generation tasks such as image captioning.
+    \subsection{Generative Pre-trained Transformer 2 (GPT-2)}
+    GPT-2 is a large-scale language model based on the Transformer 
+    decoder architecture proposed by Radford et al.\cite{Radford}. 
+    According to the paper, Transformer completely replaces the traditional RNN or 
+    CNN structure with self-attention, which is more efficient and accurate when processing 
+    long sequence dependencies. Therefore, we consider implementing the transformer 
+    structure as our decoder of the whole pipeline. Unlike the traditional 
+    Transformer, which contains both encoder and decoder components, 
+    GPT-2 uses only a decoder. This design enables the model to predict the next token based solely on previously generated tokens, 
+    making the generated text semantically relevant and well suited for text generation tasks such as image captioning.
+    
+    \subsection{Multi-Head Attention Mechanism}
+    Inspired by the \textit{``Attention Is All You Need''} paper 
+    \cite{vaswani2017attention}, we employ a multi-head attention 
+    mechanism as a cross-modal connector between the CLIP image embedding
+    and the GPT-2 language model. Instead of using a linear layer to directly 
+    project the CLIP features into the GPT-2 embedding space, we employ an 
+    attention mechanism that enables the model to selectively focus on 
+    different aspects of the visual features when generating each token 
+    in the caption, making the generated tokens more consistent with the 
+    image information. Multi-head Attention network allows the model to 
+    learn how different regions in the image affect language production.
 
-
-\begin{equation}
-L = -\sum_{i \in I} \log \frac{\exp(\text{sim}(z_i, z_j)/\tau)}{\sum_{k \neq i}\exp(\text{sim}(z_i, z_k)/\tau)}
-\end{equation}
-where $\text{sim}(z_i, z_j)$ is the cosine similarity between embeddings, and $\tau$ is the temperature hyperparameter.
-
-\subsection{Comparison to Classical Methods}
-Prior to contrastive learning, traditional unsupervised feature learning methods included:
-\begin{itemize}
-  \item \textbf{Principal Component Analysis (PCA):} Projects data onto lower-dimensional eigenvectors
-with maximal variance.
-  \item \textbf{Autoencoders:} Learn representations by reconstructing input data through an encoder-decoder
-framework.
-\end{itemize}
 We compare these classical approaches with SimCLR to understand its advantages and limitations.
-
+\pagebreak
 \section{Methodology}
 
 \subsection{Implementation Details}
@@ -119,7 +115,11 @@ a two-layer MLP projection head.
   \item Gaussian blur
   \item Horizontal flipping
 \end{itemize}
-
+\begin{equation}
+    L = -\sum_{i \in I} \log \frac{\exp(\text{sim}(z_i, z_j)/\tau)}{\sum_{k \neq i}\exp(\text{sim}(z_i, z_k)/\tau)}
+    \end{equation}
+    where $\text{sim}(z_i, z_j)$ is the cosine similarity between embeddings, and $\tau$ is the temperature hyperparameter.
+    
 \textbf{Training Details:} We train SimCLR on CIFAR-10 and STL-10 using:
 \begin{itemize}
   \item Batch size: \{128, 256, 512\}
@@ -197,10 +197,11 @@ insights into optimizing contrastive learning for different datasets.
     
     \bibitem{Radford}
     Radford, A., Wu, J., Child, R., Luan, D., Amodei, D., \& Sutskever, I. (2019). ``Language Models are Unsupervised Multitask Learners.'' OpenAI Technical Report.
-    
-    \bibitem{li2020oscar}
-    Li, X., Yin, X., Li, C., Zhang, P., Hu, X., Zhang, L., Wang, L., Hu, H., Dong, L., Wei, F., Choi, Y., \& Gao, J. (2020). ``Oscar: Object-Semantics Aligned Pre-training for Vision-Language Tasks.'' ECCV 2020.
-    
+
+    \bibitem{vaswani2017attention}
+    Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., \& Polosukhin, I. (2017). ``Attention is all you need.'' 
+    Advances in Neural Information Processing Systems, 30.
+
     \bibitem{mokady2021clipcap}
     Mokady, R., Hertz, A., \& Bermano, A. H. (2021). ``ClipCap: CLIP Prefix for Image Captioning.'' arXiv preprint arXiv:2111.09734.
     
