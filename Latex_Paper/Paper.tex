@@ -1,0 +1,220 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{microtype}
+
+\usepackage[margin=1in]{geometry}
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0em}
+\makeatletter
+\def\@maketitle{
+  \newpage
+  \null
+  \vskip 2em
+  \begin{center}
+  \let \footnote \thanks
+    {\LARGE \@title \par}
+    \vskip 1.5em
+    {\large \lineskip .5em
+      \begin{tabular}[t]{c}
+        \@author
+      \end{tabular}\par}
+    \vskip 1em
+    {\large \@date}
+  \end{center}
+  \par
+  \vskip 1.5em}
+\makeatother
+
+\begin{document}
+
+\title{Image Caption Generation With CLIP+GPT-2 Model}
+\author{Siyuan Jing and Haonan Wu\\ Boston University \\ siyuan16@bu.edu and whn17@bu.edu}
+\date{May 3, 2025}
+\maketitle
+
+\begin{abstract}
+To be finished
+\end{abstract}
+
+\section{Introduction}
+Image caption generation, the task of recognizing images to generate natural language descriptions, lies at the critical intersection of 
+computer vision and natural language processing. 
+It plays an important role in a variety of applications, including image retrieval, accessibility for the visually impaired, and automated image content processing.
+
+Recent advances in vision-language models have enabled more accurate and 
+fluent caption generation by leveraging large-scale pretraining on aligned image-text pairs 
+. These models demonstrate remarkable capabilities in understanding visual content and 
+translating it into coherent text descriptions.
+
+Motivated by these developments, and after reviewing related 
+literature \cite{Nukrai2022},we aim to replicate a CLIP+GPT-2 based 
+image captioning system. Through this project, we seek to explore and deepen our understanding of 
+machine learning, as well as its broader applications in fields such as computer vision and natural language generation.
+\begin{itemize}
+    \item Leverage the pretrained CLIP model to extract semantically rich image embeddings without the need for training a custom vision encoder.
+    \item Utilize the generative capabilities of GPT-2 to produce fluent and coherent natural language captions.
+    \item Bridge the gap between visual and textual modalities by introducing a projection layer that maps image embeddings into GPT-2's input space.
+    \item Enable flexible and data-efficient image captioning, where the visual semantics guide the generation through prefix-based conditioning.
+    \item Evaluate the quality of the generated captions using standard metrics such as BLEU and CIDEr, in order to quantitatively assess the model's accuracy and relevance.
+\end{itemize}
+\pagebreak
+\section{Background and Related Work}
+
+\subsection{CLIP(Contrastive Language-Image Pretraining)}
+CLIP from OpenAI is a visual-language model. Instead of relying on 
+task-specific supervised learning, CLIP is trained on a dataset of 400
+ million image-text pairs collected from the internet using a contrastive 
+ loss function. CLIP consists of two separate encoders: a visual encoder 
+ (ResNet) for images, and a text encoder (Transformer) for captions. 
+ Its ability to generate rich, semantically meaningful image 
+ embeddings makes CLIP a powerful foundation for our systems and 
+ an ideal visual component in our CLIP+GPT-2 image captioning pipeline. 
+ For example, according to Mokady et al.\cite{Mokady2021}, it mentioned that the visual encoding capability of 
+ CLIP can be used to embed and project the generated images into the input 
+ space of GPT-2 to generate prefixes, which helps the final caption generation of GPT-2. Inspired by this article, we decided to study the CLIP architecture and implement related deployments.
+
+ \subsection{CLIP(Contrastive Language-Image Pretraining)}
+ GPT-2 is a large-scale language model based on the Transformer 
+ decoder architecture proposed by Radford et al. \cite{Radford}. 
+ According to the paper, Transformer completely replaces the traditional RNN or 
+ CNN structure with self-attention, which is more efficient and accurate when processing 
+ long sequence dependencies. Therefore, we consider implementing the transformer 
+ structure as our decoder of the whole pipeline. Unlike the traditional 
+ Transformer, which contains both encoder and decoder components, 
+ GPT-2 uses only a decoder. This design enables the model to predict the next token based solely on previously generated tokens, 
+ making the generated text semantically relevant and well suited for text generation tasks such as image captioning.
+
+
+\begin{equation}
+L = -\sum_{i \in I} \log \frac{\exp(\text{sim}(z_i, z_j)/\tau)}{\sum_{k \neq i}\exp(\text{sim}(z_i, z_k)/\tau)}
+\end{equation}
+where $\text{sim}(z_i, z_j)$ is the cosine similarity between embeddings, and $\tau$ is the temperature hyperparameter.
+
+\subsection{Comparison to Classical Methods}
+Prior to contrastive learning, traditional unsupervised feature learning methods included:
+\begin{itemize}
+  \item \textbf{Principal Component Analysis (PCA):} Projects data onto lower-dimensional eigenvectors
+with maximal variance.
+  \item \textbf{Autoencoders:} Learn representations by reconstructing input data through an encoder-decoder
+framework.
+\end{itemize}
+We compare these classical approaches with SimCLR to understand its advantages and limitations.
+
+\section{Methodology}
+
+\subsection{Implementation Details}
+\textbf{Backbone Network:} We use a ResNet-18 as the feature encoder. The final representation is fed into
+a two-layer MLP projection head.
+
+\textbf{Augmentation Pipeline:} SimCLR relies heavily on augmentations, which include:
+\begin{itemize}
+  \item Random crop and resize
+  \item Color jittering
+  \item Gaussian blur
+  \item Horizontal flipping
+\end{itemize}
+
+\textbf{Training Details:} We train SimCLR on CIFAR-10 and STL-10 using:
+\begin{itemize}
+  \item Batch size: \{128, 256, 512\}
+  \item Temperature parameter: \{0.07, 0.1, 0.5\}
+  \item Optimizer: Adam with a learning rate of $3 \times 10^{-4}$
+  \item Number of epochs: 200
+\end{itemize}
+
+\subsection{Evaluation Protocol}
+We evaluate the quality of learned representations by training a simple linear classifier on top of the
+frozen embeddings.
+
+\section{Experiments and Results}
+
+\subsection{Dataset and Preprocessing}
+We conduct experiments on:
+\begin{itemize}
+  \item \textbf{CIFAR-10:} A 10-class dataset with 60,000 images.
+  \item \textbf{STL-10:} A larger dataset often used for unsupervised learning benchmarks.
+\end{itemize}
+
+\subsection{Baseline Comparisons}
+We compare SimCLR embeddings with:
+\begin{itemize}
+  \item PCA-based dimensionality reduction ($d = 128$)
+  \item Autoencoders trained on the same dataset
+  \item Supervised ResNet-18 trained on CIFAR-10
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Method & CIFAR-10 Accuracy (\%) & STL-10 Accuracy (\%) \\
+\midrule
+Supervised ResNet-18 & 92.5 & 85.4 \\
+PCA + kNN & 45.6 & 38.2 \\
+Autoencoder + kNN & 55.3 & 49.6 \\
+SimCLR (Ours) & 80.2 & 76.4 \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of representation learning methods. SimCLR significantly outperforms classical techniques.}
+\end{table}
+
+\subsection{Ablation Studies}
+\textbf{Effect of Temperature $\tau$:} We analyze how different values of $\tau$ in the contrastive loss impact performance.
+
+\section{Discussion}
+
+\subsection{Key Findings}
+\begin{itemize}
+  \item SimCLR significantly outperforms PCA and autoencoders in feature learning.
+  \item The choice of augmentations greatly affects performance.
+  \item Higher temperature values in contrastive loss lead to better separation of features.
+\end{itemize}
+
+\subsection{Future Work}
+\begin{itemize}
+  \item Extend to other self-supervised methods (e.g., BYOL, MoCo).
+  \item Apply to domain adaptation tasks.
+  \item Explore contrastive learning for text or multimodal applications.
+\end{itemize}
+
+\section{Conclusion}
+Our empirical study demonstrates the effectiveness of contrastive learning via SimCLR for representation
+learning. By systematically evaluating augmentation pipelines, batch sizes, and loss functions, we provide
+insights into optimizing contrastive learning for different datasets.
+\pagebreak
+\begin{thebibliography}{99}
+    \bibitem{Nukrai2022}
+    Nukrai, D., Mokady, R., \& Globerson, A. (2022). Text-Only Training for Image Captioning using Noise-Injected CLIP. https://doi.org/10.48448/n7sq-p557
+    
+    \bibitem{Mokady2021}
+    Mokady, R., Hertz, A., \& Bermano, A. H. (2021). ClipCap: CLIP Prefix for Image Captioning. http://arxiv.org/abs/2111.09734
+    
+    \bibitem{Radford}
+    Radford, A., Wu, J., Child, R., Luan, D., Amodei, D., \& Sutskever, I. (2019). ``Language Models are Unsupervised Multitask Learners.'' OpenAI Technical Report.
+    
+    \bibitem{li2020oscar}
+    Li, X., Yin, X., Li, C., Zhang, P., Hu, X., Zhang, L., Wang, L., Hu, H., Dong, L., Wei, F., Choi, Y., \& Gao, J. (2020). ``Oscar: Object-Semantics Aligned Pre-training for Vision-Language Tasks.'' ECCV 2020.
+    
+    \bibitem{mokady2021clipcap}
+    Mokady, R., Hertz, A., \& Bermano, A. H. (2021). ``ClipCap: CLIP Prefix for Image Captioning.'' arXiv preprint arXiv:2111.09734.
+    
+    \bibitem{papineni2002bleu}
+    Papineni, K., Roukos, S., Ward, T., \& Zhu, W. J. (2002). ``BLEU: a method for automatic evaluation of machine translation.'' ACL 2002.
+    
+    \bibitem{vedantam2015cider}
+    Vedantam, R., Lawrence Zitnick, C., \& Parikh, D. (2015). ``CIDEr: Consensus-based image description evaluation.'' CVPR 2015.
+    
+    \bibitem{chen2020simple}
+    Ting Chen, Simon Kornblith, Mohammad Norouzi, Geoffrey Hinton. ``A Simple Framework for Contrastive Learning of Visual Representations.'' ICML 2020.
+    
+    \bibitem{hinton2006reducing}
+    Geoffrey Hinton, Ruslan Salakhutdinov. ``Reducing the Dimensionality of Data with Neural Networks.'' Science, 2006.
+    \end{thebibliography}
+
+\end{document}
