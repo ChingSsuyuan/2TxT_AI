@@ -461,7 +461,6 @@ def main():
 
     val_dataset = None
     if args.val_data is not None:
-        print(f"加载验证数据: {args.val_data}")
         val_dataset = ClipProDataset(args.val_data, prefix_length, normalize_prefix=args.normalize_prefix)
     
     prefix_dim = 640
