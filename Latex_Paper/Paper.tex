@@ -7,7 +7,22 @@
 \usepackage{hyperref}
 \usepackage{xcolor}
 \usepackage{microtype}
+% \usepackage{titlesec}
+% \titleformat{\subsubsection}[runin]
+%   {\normalfont\normalsize} 
+%   {\thesubsubsection}      
+%   {1em}                    
+%   {}                     
+%   []       
+% \titlespacing*{\subsubsection}
+%   {0pt}                       
+%   {1.5ex plus 0.5ex minus 0.2ex} 
+%   {0.8ex plus 0.2ex}                 
+\usepackage{tikz}
 
+\usetikzlibrary{shapes.geometric, arrows, positioning, fit, backgrounds}
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
 \usepackage[margin=1in]{geometry}
 \setlength{\parskip}{0.5em}
 \setlength{\parindent}{0em}
@@ -114,14 +129,25 @@ image input, feature extraction and encoding, feature processing,
 feature decoding, model training and error evaluation. We will also 
 introduce the optimization we used.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figure1.png}
+    \caption{CLIP+GPT-2 Training Pipeline}
+    \label{fig:architecture}
+    \end{figure}
 
-\textbf{Augmentation Pipeline:} SimCLR relies heavily on augmentations, which include:
-\begin{itemize}
-  \item Random crop and resize
-  \item Color jittering
-  \item Gaussian blur
-  \item Horizontal flipping
-\end{itemize}
+\subsubsection{Data Set}
+
+We utilize the MS COCO dataset \cite{COCO}for training and evaluation, 
+MS COCO (Microsoft Common Objects in Context) 
+is a large-scale image recognition, segmentation, 
+and annotation dataset that is widely used in research 
+in the field of computer vision, especially in tasks 
+such as image captioning, object detection, and semantic 
+segmentation. It contains 330K images with 5 captions each. 
+We will split our dataset into three parts: 80\% training, 10\% validation, 10\% testing.
+
+\subsubsection{ Data Preparation}
 \begin{equation}
     L = -\sum_{i \in I} \log \frac{\exp(\text{sim}(z_i, z_j)/\tau)}{\sum_{k \neq i}\exp(\text{sim}(z_i, z_k)/\tau)}
     \end{equation}
@@ -210,8 +236,8 @@ insights into optimizing contrastive learning for different datasets.
     Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., \& Polosukhin, I. (2017). ``Attention is all you need.'' 
     Advances in Neural Information Processing Systems, 30.
 
-    \bibitem{mokady2021clipcap}
-    Mokady, R., Hertz, A., \& Bermano, A. H. (2021). ``ClipCap: CLIP Prefix for Image Captioning.'' arXiv preprint arXiv:2111.09734.
+    \bibitem{COCO}
+    Xinlei Chen, Hao Fang, Tsung-Yi Lin, Ramakrishna Vedantam, Saurabh Gupta, Piotr Dollár, and C Lawrence Zitnick. 2015. Microsoft coco captions: Data collection and evaluation server. arXiv preprint arXiv:1504.00325.
     
     \bibitem{papineni2002bleu}
     Papineni, K., Roukos, S., Ward, T., \& Zhu, W. J. (2002). ``BLEU: a method for automatic evaluation of machine translation.'' ACL 2002.
