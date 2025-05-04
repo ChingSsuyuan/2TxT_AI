@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1746398109.05497 "/Users/michaeljing/Desktop/Projects/AI_model/Latex_Paper/Paper.tex" "Paper.pdf" "Paper" 1746398110.20734 0
-  "/Users/michaeljing/Desktop/Projects/AI_model/Latex_Paper/Paper.tex" 1746398109.05711 19521 fefd7a6eed1ce1858e939fa0ea683d69 ""
+["pdflatex"] 1746398752.72508 "/Users/michaeljing/Desktop/Projects/AI_model/Latex_Paper/Paper.tex" "Paper.pdf" "Paper" 1746398753.86317 0
+  "/Users/michaeljing/Desktop/Projects/AI_model/Latex_Paper/Paper.tex" 1746398752.64146 20004 0fb42f75e19ab1494545b51359edb0a8 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -199,9 +199,9 @@
   "/usr/local/texlive/2024/texmf.cnf" 1710266656 577 e590dabc9e28c5b61546e15f63eebcdf ""
   "F4.png" 1746394178.37345 1169327 00d83198e23fa99db9d7d5fa034add4e ""
   "F5.png" 1746394467.67167 1108484 738130e2d79695f9079ac8c109ed6411 ""
-  "Paper.aux" 1746398110.09857 4241 e8030bbed1611dbc880711accac7a073 "pdflatex"
-  "Paper.out" 1746398110.09925 3263 085d3311bbd879e1193c9712fb4f9921 "pdflatex"
-  "Paper.tex" 1746398109.05711 19521 fefd7a6eed1ce1858e939fa0ea683d69 ""
+  "Paper.aux" 1746398753.76587 4373 a64fcb895db983159043f6860dfb65e0 "pdflatex"
+  "Paper.out" 1746398753.7666 3409 bbfda56cc8bd95a4bff3591c69de5f14 "pdflatex"
+  "Paper.tex" 1746398752.64146 20004 0fb42f75e19ab1494545b51359edb0a8 ""
   "f2.png" 1746392138.70147 127235 1c99e0cb163ee581575ef7afecb06664 ""
   "f3.png" 1746392958.22976 81352 68693182870549f960e2a649f4923c19 ""
   "figure1.png" 1746389496.32472 183030 11a07dd129368edcfc3e2c3297e7555e ""

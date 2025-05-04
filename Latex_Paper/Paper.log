@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.1.27)  4 MAY 2025 18:35
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.1.27)  4 MAY 2025 18:45
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -647,33 +647,33 @@ Package microtype Info: Loading generic protrusion settings for font family
  [1
 
 {/usr/local/texlive/2024/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/local/texlive/2024/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc}{/usr/local/texlive/2024/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc}] [2]
-<figure1.png, id=115, 553.06625pt x 393.47pt>
+<figure1.png, id=119, 553.06625pt x 393.47pt>
 File: figure1.png Graphic file (type png)
 <use figure1.png>
 Package pdftex.def Info: figure1.png  used on input line 144.
 (pdftex.def)             Requested size: 375.80544pt x 267.35793pt.
  [3 <./figure1.png>] [4]
-<f2.png, id=138, 574.145pt x 342.27875pt>
+<f2.png, id=142, 574.145pt x 342.27875pt>
 File: f2.png Graphic file (type png)
 <use f2.png>
-Package pdftex.def Info: f2.png  used on input line 224.
+Package pdftex.def Info: f2.png  used on input line 232.
 (pdftex.def)             Requested size: 375.80544pt x 224.04013pt.
  [5 <./f2.png>] [6]
-<f3.png, id=156, 536.0025pt x 335.2525pt>
+<f3.png, id=160, 536.0025pt x 335.2525pt>
 File: f3.png Graphic file (type png)
 <use f3.png>
-Package pdftex.def Info: f3.png  used on input line 277.
+Package pdftex.def Info: f3.png  used on input line 285.
 (pdftex.def)             Requested size: 375.80544pt x 235.0537pt.
  [7 <./f3.png>]
-<F4.png, id=164, 782.925pt x 784.9325pt>
+<F4.png, id=168, 782.925pt x 784.9325pt>
 File: F4.png Graphic file (type png)
 <use F4.png>
-Package pdftex.def Info: F4.png  used on input line 295.
+Package pdftex.def Info: F4.png  used on input line 303.
 (pdftex.def)             Requested size: 211.38832pt x 211.92262pt.
-<F5.png, id=165, 773.89125pt x 812.03375pt>
+<F5.png, id=169, 773.89125pt x 812.03375pt>
 File: F5.png Graphic file (type png)
 <use F5.png>
-Package pdftex.def Info: F5.png  used on input line 302.
+Package pdftex.def Info: F5.png  used on input line 310.
 (pdftex.def)             Requested size: 201.99121pt x 211.94157pt.
  [8 <./F4.png> <./F5.png>] [9] [10] (./Paper.aux)
  ***********
@@ -681,21 +681,21 @@ LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-02-20>
  ***********
 Package rerunfilecheck Info: File `Paper.out' has not changed.
-(rerunfilecheck)             Checksum: 085D3311BBD879E1193C9712FB4F9921;3263.
+(rerunfilecheck)             Checksum: BBFDA56CC8BD95A4BFF3591C69DE5F14;3409.
  ) 
 Here is how much of TeX's memory you used:
- 25505 strings out of 474116
- 477866 string characters out of 5743682
+ 25507 strings out of 474116
+ 477906 string characters out of 5743682
  1938187 words of memory out of 5000000
- 47285 multiletter control sequences out of 15000+600000
+ 47286 multiletter control sequences out of 15000+600000
  580189 words of font info for 152 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  84i,8n,87p,1059b,535s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/cm-super/sfbx1000.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/cm-super/sfbx1095.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/cm-super/sfbx1200.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/cm-super/sfbx1440.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/cm-super/sfrm0800.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/cm-super/sfrm1000.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/cm-super/sfrm1095.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/cm-super/sfrm1728.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/cm-super/sfti1095.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/cm-super/sftt1000.pfb>
-Output written on Paper.pdf (10 pages, 2772700 bytes).
+Output written on Paper.pdf (10 pages, 2773464 bytes).
 PDF statistics:
- 280 PDF objects out of 1000 (max. 8388607)
- 216 compressed objects within 3 object streams
- 45 named destinations out of 1000 (max. 500000)
- 41670 words of extra memory for PDF output out of 42996 (max. 10000000)
+ 284 PDF objects out of 1000 (max. 8388607)
+ 220 compressed objects within 3 object streams
+ 46 named destinations out of 1000 (max. 500000)
+ 41678 words of extra memory for PDF output out of 42996 (max. 10000000)
 

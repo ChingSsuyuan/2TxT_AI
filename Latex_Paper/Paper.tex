@@ -162,7 +162,15 @@ introduce the optimization we used.
     we found that the trained model may be overly sensitive to some features of some pictures, 
     so we add some noise to 10\% of the feature information of each picture to improve generalization ability and reduce overfitting. 
     These embeddings can then be projected into the GPT-2 space for training.
-\pagebreak
+    \subsubsection{Feature Process}
+    After we get the original CLIP embedding, 
+    we will normalize it for better training performance. 
+    In the actual training process, we found that the 
+    trained model may be overly sensitive to some 
+    features of some pictures, so we add some noise to 
+    10\% of the feature information of each picture to 
+    improve generalization ability and reduce overfitting. These embeddings can then be projected into the GPT-2 space for training.
+
     \subsubsection{Model training}
     Next, we use a multi-layer Transformer to map the 
     CLIP embedding to the word embedding space of GPT-2 
