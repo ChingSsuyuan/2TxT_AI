@@ -229,12 +229,9 @@ def evaluate_model_on_coco():
         }
         results.append(result)
     
-    # Calculate average metrics
     num_images = len(results)
     for metric in overall_metrics:
         overall_metrics[metric] /= num_images
-    
-    # Print results
     print("\nEvaluation Results:")
     print("=" * 80)
     
@@ -253,12 +250,9 @@ def evaluate_model_on_coco():
         print(f"  CIDEr: {result['cider_score']:.4f}")
         print("=" * 80)
     
-    # Print average metrics
     print("\nAverage Metrics:")
     for metric_name, avg_value in overall_metrics.items():
         print(f"  {metric_name}: {avg_value:.4f}")
-    
-    # Also run leave-one-out evaluation of original captions
     print("\nLeave-one-out evaluation of original captions:")
     
     loo_metrics = {
@@ -274,13 +268,9 @@ def evaluate_model_on_coco():
         print(f"\nImage: {img_data['file_name']}")
         
         for i, candidate in enumerate(img_data['captions']):
-            # Use all other captions as references (leave-one-out)
             references = [img_data['captions'][j] for j in range(len(img_data['captions'])) if j != i]
             
-            # Compute BLEU scores
             bleu_scores = compute_bleu(references, candidate)
-            
-            # Compute CIDEr score
             cider_score = compute_cider(references, candidate)
             
             print(f"\nOriginal Caption {i+1}:")
@@ -294,24 +284,18 @@ def evaluate_model_on_coco():
             loo_metrics['CIDEr'] += cider_score
             
             total_captions += 1
-    
-    # Calculate average leave-one-out metrics
     for metric in loo_metrics:
         loo_metrics[metric] /= total_captions
     
     print("\nAverage Leave-One-Out Metrics (Original Captions):")
     for metric_name, avg_value in loo_metrics.items():
         print(f"  {metric_name}: {avg_value:.4f}")
-    
-    # Compare model performance vs. human performance
     print("\nComparison: Model vs. Human Performance:")
     for metric in overall_metrics:
         model_score = overall_metrics[metric]
         human_score = loo_metrics[metric]
         diff = model_score - human_score
         print(f"  {metric}: Model: {model_score:.4f}, Human: {human_score:.4f}, Diff: {diff:.4f}")
-    
-    # Save results to JSON
     output_file = 'model_evaluation_results.json'
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump({
