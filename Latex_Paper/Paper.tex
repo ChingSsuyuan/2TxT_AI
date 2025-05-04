@@ -303,25 +303,54 @@ captions within 10 seconds.
 
 \subsection{Key Findings}
 \begin{itemize}
-  \item Automated organization of visual content: 
+    \item Automated organization of visual content: 
+    
+    Our model demonstrates strong automatic organization 
+    capabilities for visual content, especially when dealing 
+    with a large number of unlabeled images. By generating 
+    relevant and informative captions, the system can group 
+    images without manual annotation.
+
+        \item Effective CLIP-to-GPT-2 Mapping:
   
-  Our model efficiently manages unlabeled images, reducing the need for manual effort.  
-  \item Effective CLIP-to-GPT-2 Mapping:
-  
-  Our multi-head attention mechanism bridges visual and textual modalities for high-quality captions.
-  \item Noise Injection Boosts Generalization:
-  
-  Introducing noise during training boosts generalization and helps create diverse, accurate captions.
+    The key design of our entire model is the multi-head 
+    attention mechanism used to connect CLIP visual embedding
+    and GPT-2 language model input. Unlike simple linear projection, 
+    the multi-head attention mechanism enables the model to learn 
+    multiple semantic alignment patterns between image features and 
+    different dimensions of generated captions. Test results show 
+    that the implementation of this mechanism can generate more 
+    accurate captions that reflect the details of image semantics.
+
+    \item Noise Injection Boosts Generalization:
+    We observe that adding small Gaussian noise into CLIP embeddings 
+    during training improves the model's generalization across 
+    different image inputs. This regularization technique helps 
+    the mapping module avoid overfitting to specific embedding 
+    patterns and encourages the model to generate captions that
+    are both accurate and diverse. Result shows that noise
+    improves both BLEU and CIDEr scores, indicating improved
+    robustness and semantic coverage of caption generation.
+    
 \end{itemize}
 
 \subsection{Future Work}
-\begin{itemize}
-  \item 
-  \item 
-  \item 
-\end{itemize}
+In future work, we plan to expand the test 
+dataset to cover more diverse and challenging images to 
+more robustly evaluate the generalization ability of our model. 
+In addition, we can try to study and combine more powerful visual 
+language models (such as CLIP ViT-L or GPT-3 variants) to achieve 
+stronger semantic alignment capabilities.
 
 \section{Conclusion}
+In this project, we implemented an image captioning 
+system by combining the powerful visual encoding capabilities 
+of CLIP and the generative language capabilities of GPT-2. By 
+introducing a mapping module based on a multi-head attention 
+mechanism, we effectively reduced the gap between visual and 
+textual modalities, enabling the generation of fluent and 
+semantically relevant captions. We further enhanced the 
+generalization ability of the model by adding noise during training, and selected appropriate loss functions and objective functions for training. Finally, evaluations using BLEU and CIDEr metrics confirmed the effectiveness of our model, especially in capturing human-written semantics, with the CIDEr score reflecting its excellent performance.
 
 
 \pagebreak
